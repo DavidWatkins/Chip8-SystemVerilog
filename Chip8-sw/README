@@ -1,0 +1,24 @@
+Simple Device Driver for the Chip8 Emulator
+
+make
+
+# To display Kernel debugging messages on the console
+echo 8 > /proc/sys/kernel/printk
+
+# Alternately,
+dmesg | tail -7
+
+insmod vga_ball.ko
+lsmod
+./hello
+
+rmmod vga_ball
+
+Once the module is loaded, look for information about it with
+
+lsmod
+cat /proc/iomem
+ls /sys/module/vga_ball
+ls /sys/devices/soc.0
+ls /sys/class/misc/vga_ball
+ls /sys/bus/drivers
