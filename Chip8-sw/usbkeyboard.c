@@ -86,21 +86,21 @@ int kbiskeypad(struct usb_keyboard_packet* packet, char val[1]) {
 	uint8_t keycode = packet->keycode[0];
 
 	switch(keycode) {
-		case KEY1: val[0] = 0x0; return 1; break;
-		case KEY2: val[0] = 0x1; return 1; break;
-		case KEY3: val[0] = 0x2; return 1; break;
-		case KEYC: val[0] = 0x3; return 1; break;
+		case KEY1: val[0] = 0x1; return 1; break;
+		case KEY2: val[0] = 0x2; return 1; break;
+		case KEY3: val[0] = 0x3; return 1; break;
+		case KEYC: val[0] = 0xC; return 1; break;
 		case KEY4: val[0] = 0x4; return 1; break;
 		case KEY5: val[0] = 0x5; return 1; break;
 		case KEY6: val[0] = 0x6; return 1; break;
-		case KEYD: val[0] = 0x7; return 1; break;
-		case KEY7: val[0] = 0x8; return 1; break;
-		case KEY8: val[0] = 0x9; return 1; break;
-		case KEY9: val[0] = 0xA; return 1; break;
-		case KEYE: val[0] = 0xB; return 1; break;
-		case KEYA: val[0] = 0xC; return 1; break;
-		case KEY0: val[0] = 0xD; return 1; break;
-		case KEYB: val[0] = 0xE; return 1; break;
+		case KEYD: val[0] = 0xD; return 1; break;
+		case KEY7: val[0] = 0x7; return 1; break;
+		case KEY8: val[0] = 0x8; return 1; break;
+		case KEY9: val[0] = 0x9; return 1; break;
+		case KEYE: val[0] = 0xE; return 1; break;
+		case KEYA: val[0] = 0xA; return 1; break;
+		case KEY0: val[0] = 0x0; return 1; break;
+		case KEYB: val[0] = 0xB; return 1; break;
 		case KEYF: val[0] = 0xF; return 1; break;
 		default: break;
 	}
