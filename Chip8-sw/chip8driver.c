@@ -1,9 +1,8 @@
 /*
- * Device driver for the VGA Ball Emulator
+ * Device driver for the CHIP8 SystemVerilog Emulator
  *
  * A Platform device implemented using the misc subsystem
  *
- * David Watkins (djw2146), Ashley Kling (ask2203)
  * Columbia University
  *
  * References:
@@ -13,10 +12,10 @@
  * http://free-electrons.com/docs/
  *
  * "make" to build
- * insmod vga_ball.ko
+ * insmod chip8driver.ko
  *
  * Check code style with
- * checkpatch.pl --file --no-tree vga_ball.c
+ * checkpatch.pl --file --no-tree chip8driver.c
  */
 
 #include <linux/module.h>
@@ -32,34 +31,88 @@
 #include <linux/of_address.h>
 #include <linux/fs.h>
 #include <linux/uaccess.h>
-#include "vga_ball.h"
+#include "chip8driver.h"
 
-#define DRIVER_NAME "vga_led"
+#define DRIVER_NAME "chip8"
 
 /*
  * Information about our device
  */
-struct vga_ball_dev {
+struct chip8_dev {
 	struct resource res;         /* Resource: our registers */
 	void __iomem *virtbase;      /* Where registers can be accessed in memory */
-	unsigned int radius;
-	unsigned int xpos;
-	unsigned int ypos;
 } dev;
 
 /*
- * Write attributes of ball (radius, y, x)
- * Assumes ball attributes are in range
+ * Writes an opcode (defined in chip8driver.h) to the device
  */
+static void write_op(unsigned int opcode) {
+	iowrite32(opcode, dev.virtbase);
+}
 
-static void write_ball(unsigned int xpos, unsigned int ypos, unsigned int radius) {
-	iowrite32(xpos, dev.virtbase + X_WRITE_POS);
-	iowrite32(ypos, dev.virtbase + Y_WRITE_POS);
-	iowrite32(radius, dev.virtbase + R_WRITE_POS);
+/*
+ * Reads a value after sending a proper write opcode to the device
+ */
+static void read_value(unsigned int *value) {
+	ioread32(value);
+}
 
-	dev.radius = radius;
-	dev.xpos = xpos;
-	dev.ypos = ypos;
+/*
+* Checks to see if the opcode is validly formatted
+* Need to create a more robust test, including check values
+*/
+static int isValidWriteOpcode(unsigned int opcode) {
+	return (opcode & (V0_WRITE_ADDR << 16)
+		|| (opcode & (V1_WRITE_ADDR << 16)
+		|| (opcode & (V2_WRITE_ADDR << 16)
+		|| (opcode & (V3_WRITE_ADDR << 16)
+		|| (opcode & (V4_WRITE_ADDR << 16)
+		|| (opcode & (V5_WRITE_ADDR << 16)
+		|| (opcode & (V6_WRITE_ADDR << 16)
+		|| (opcode & (V7_WRITE_ADDR << 16)
+		|| (opcode & (V8_WRITE_ADDR << 16)
+		|| (opcode & (V9_WRITE_ADDR << 16)
+		|| (opcode & (VA_WRITE_ADDR << 16)
+		|| (opcode & (VB_WRITE_ADDR << 16)
+		|| (opcode & (VC_WRITE_ADDR << 16)
+		|| (opcode & (VD_WRITE_ADDR << 16)
+		|| (opcode & (VE_WRITE_ADDR << 16)
+		|| (opcode & (VF_WRITE_ADDR << 16)
+		|| (opcode & (I_WRITE_ADDR << 16)
+		|| (opcode & (SOUND_TIMER_WRITE_ADDR << 16)
+		|| (opcode & (DELAY_TIMER_WRITE_ADDR << 16)
+		|| (opcode & (STACK_POINTER_WRITE_ADDR << 16)
+		|| (opcode & (PROGRAM_COUNTER_WRITE_ADDR << 16)
+		|| (opcode & (KEY_PRESS_ADDR << 16)
+		|| (opcode & (STATE_WRITE_ADDR << 16)
+		|| (opcode & (MEMORY_WRITE_ADDR << 16)
+		|| (opcode & (FRAMEBUFFER_ADDR << 16);
+}
+
+static int isValidReadOpcode(unsigned int opcode) {
+	return (opcode & (V0_READ_ADDR << 16))
+		|| (opcode & (V1_READ_ADDR << 16))
+		|| (opcode & (V2_READ_ADDR << 16))
+		|| (opcode & (V3_READ_ADDR << 16))
+		|| (opcode & (V4_READ_ADDR << 16))
+		|| (opcode & (V5_READ_ADDR << 16))
+		|| (opcode & (V6_READ_ADDR << 16))
+		|| (opcode & (V7_READ_ADDR << 16))
+		|| (opcode & (V8_READ_ADDR << 16))
+		|| (opcode & (V9_READ_ADDR << 16))
+		|| (opcode & (VA_READ_ADDR << 16))
+		|| (opcode & (VB_READ_ADDR << 16))
+		|| (opcode & (VC_READ_ADDR << 16))
+		|| (opcode & (VD_READ_ADDR << 16))
+		|| (opcode & (VE_READ_ADDR << 16))
+		|| (opcode & (VF_READ_ADDR << 16))
+		|| (opcode & (I_READ_ADDR << 16))
+		|| (opcode & (SOUND_TIMER_READ_ADDR << 16))
+		|| (opcode & (DELAY_TIMER_READ_ADDR << 16))
+		|| (opcode & (STACK_POINTER_READ_ADDR << 16))
+		|| (opcode & (PROGRAM_COUNTER_READ_ADDR << 16))
+		|| (opcode & (STATE_READ_ADDR << 16))
+		|| (opcode & (MEMORY_READ_ADDR << 16));
 }
 
 /*
@@ -67,30 +120,28 @@ static void write_ball(unsigned int xpos, unsigned int ypos, unsigned int radius
  * Read or write the segments on single digits.
  * Note extensive error checking of arguments
  */
-static long vga_ball_ioctl(struct file *f, unsigned int cmd, unsigned long arg)
+static long chip8_ioctl(struct file *f, unsigned int cmd, unsigned long arg)
 {
-	vga_ball_arg_t vba;
+	chip8_opcode op;
 
 	switch (cmd) {
-	case VGA_BALL_WRITE_ATTR:
-		if (copy_from_user(&vba, (vga_ball_arg_t *) arg, sizeof(vga_ball_arg_t)))
+	case CHIP8_WRITE_ATTR:
+		if (copy_from_user(&op, (chip8_opcode *) arg, sizeof(chip8_opcode)))
 			return -EACCES;
-		if (vba.radius > MAX_RADIUS || vba.radius < MIN_RADIUS)
+		if (!isValidWriteOpcode(op.opcode))
 			return -EINVAL;
-		if (vba.xpos > SCREEN_WIDTH || vba.xpos < 0)
-			return -EINVAL;
-		if (vba.ypos > SCREEN_HEIGHT || vba.ypos < 0)
-			return -EINVAL;
-		write_ball(vba.xpos, vba.ypos, vba.radius);
+		write_op(op.opcode);
 		break;
 
-	case VGA_BALL_READ_ATTR:
-		if (copy_from_user(&vba, (vga_ball_arg_t *) arg, sizeof(vga_ball_arg_t)))
+	case CHIP8_READ_ATTR:
+		if (copy_from_user(&op, (chip8_opcode *) arg, sizeof(chip8_opcode)))
 			return -EACCES;
-		vba.radius = dev.radius;
-		vba.xpos = dev.xpos;
-		vba.ypos = dev.ypos;
-		if (copy_to_user((vga_ball_arg_t *) arg, &vba, sizeof(vga_ball_arg_t)))
+		if (!isValidReadOpcode(op.opcode))
+			return -EINVAL;
+
+		iowrite32(op.opcode);
+		ioread32(&(op.opcode));
+		if (copy_to_user((chip8_opcode *) arg, &op, sizeof(chip8_opcode)))
 			return -EACCES;
 		break;
 
@@ -102,30 +153,30 @@ static long vga_ball_ioctl(struct file *f, unsigned int cmd, unsigned long arg)
 }
 
 /* The operations our device knows how to do */
-static const struct file_operations vga_ball_fops = {
+static const struct file_operations chip8_fops = {
 	.owner		= THIS_MODULE,
-	.unlocked_ioctl = vga_ball_ioctl,
+	.unlocked_ioctl = chip8_ioctl,
 };
 
 /* Information about our device for the "misc" framework -- like a char dev */
-static struct miscdevice vga_ball_misc_device = {
+static struct miscdevice chip8_misc_device = {
 	.minor		= MISC_DYNAMIC_MINOR,
 	.name		= DRIVER_NAME,
-	.fops		= &vga_ball_fops,
+	.fops		= &chip8_fops,
 };
 
 /*
  * Initialization code: get resources (registers) and display
  * a welcome message
  */
-static int __init vga_ball_probe(struct platform_device *pdev)
+static int __init chip8_probe(struct platform_device *pdev)
 {
 	//Place ball at (320,240) with radius 3
 	static unsigned int init_pos[3] = {SCREEN_WIDTH/2, SCREEN_HEIGHT/2, 20};
 	int ret;
 
-	/* Register ourselves as a misc device: creates /dev/vga_ball */
-	ret = misc_register(&vga_ball_misc_device);
+	/* Register ourselves as a misc device: creates /dev/chip8 */
+	ret = misc_register(&chip8_misc_device);
 
 	/* Get the address of our registers from the device tree */
 	ret = of_address_to_resource(pdev->dev.of_node, 0, &dev.res);
@@ -147,63 +198,63 @@ static int __init vga_ball_probe(struct platform_device *pdev)
 		goto out_release_mem_region;
 	}
 
-	/* Display a welcome message */
-	write_ball(init_pos[0], init_pos[1], init_pos[2]);
+	/* Write paused state to the chip8 device */
+	write_op((STATE_WRITE_ADDR << 16) | PAUSED_STATE);
 
 	return 0;
 
 out_release_mem_region:
 	release_mem_region(dev.res.start, resource_size(&dev.res));
 out_deregister:
-	misc_deregister(&vga_ball_misc_device);
+	misc_deregister(&chip8_misc_device);
 	return ret;
 }
 
 /* Clean-up code: release resources */
-static int vga_ball_remove(struct platform_device *pdev)
+static int chip8_remove(struct platform_device *pdev)
 {
 	iounmap(dev.virtbase);
 	release_mem_region(dev.res.start, resource_size(&dev.res));
-	misc_deregister(&vga_ball_misc_device);
+	misc_deregister(&chip8_misc_device);
 	return 0;
 }
 
 /* Which "compatible" string(s) to search for in the Device Tree */
 #ifdef CONFIG_OF
-static const struct of_device_id vga_ball_of_match[] = {
-	{ .compatible = "altr,vga_led" },
+static const struct of_device_id chip8_of_match[] = {
+	{ .compatible = "altr,chip8" },
 	{},
 };
-MODULE_DEVICE_TABLE(of, vga_ball_of_match);
+MODULE_DEVICE_TABLE(of, chip8_of_match);
 #endif
 
 /* Information for registering ourselves as a "platform" driver */
-static struct platform_driver vga_ball_driver = {
+static struct platform_driver chip8_driver = {
 	.driver	= {
 		.name	= DRIVER_NAME,
 		.owner	= THIS_MODULE,
-		.of_match_table = of_match_ptr(vga_ball_of_match),
+		.of_match_table = of_match_ptr(chip8_of_match),
 	},
-	.remove	= __exit_p(vga_ball_remove),
+	.remove	= __exit_p(chip8_remove),
 };
 
 /* Called when the module is loaded: set things up */
-static int __init vga_ball_init(void)
+static int __init chip8_init(void)
 {
 	pr_info(DRIVER_NAME ": init\n");
-	return platform_driver_probe(&vga_ball_driver, vga_ball_probe);
+	return platform_driver_probe(&chip8_driver, chip8_probe);
 }
 
 /* Called when the module is unloaded: release resources */
-static void __exit vga_ball_exit(void)
+static void __exit chip8_exit(void)
 {
-	platform_driver_unregister(&vga_ball_driver);
+	platform_driver_unregister(&chip8_driver);
 	pr_info(DRIVER_NAME ": exit\n");
 }
 
-module_init(vga_ball_init);
-module_exit(vga_ball_exit);
+module_init(chip8_init);
+module_exit(chip8_exit);
 
 MODULE_LICENSE("GPL");
-MODULE_AUTHOR("David Watkins (djw2146), Ashley Kling (ask2203)");
-MODULE_DESCRIPTION("VGA Ball Emulator");
+MODULE_AUTHOR("The Chip8 Team");
+MODULE_DESCRIPTION("Chip8 Emulator");

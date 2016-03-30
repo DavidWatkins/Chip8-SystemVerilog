@@ -203,8 +203,8 @@
 
 			compatible = "simple-bus";
 
-			vga_ball: vga_ball@0 {
-				 compatible = "altr,vga_ball";
+			chip8: chip8@0 {
+				 compatible = "altr,chip8";
 				 reg = <0x0 0x2>;
 			};				 
 		};

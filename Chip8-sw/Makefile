@@ -7,17 +7,19 @@ else
 
 # We are being compiled as a module: use the Kernel build system
 
-	KERNEL_SOURCE := /usr/src/linux
+	KERNEL_SOURCE := /usr/src/linux*
         PWD := $(shell pwd)
 
-default: module roll_ball bounce_ball
+default: module chip8 
 
 module:
 	${MAKE} -C ${KERNEL_SOURCE} SUBDIRS=${PWD} modules
 
+chip8: usbkeyboard
+
 clean:
 	${MAKE} -C ${KERNEL_SOURCE} SUBDIRS=${PWD} clean
-	${RM} roll_ball bounce_ball
+	${RM} chip8
 
 socfpga.dtb : socfpga.dtb
 	dtc -O dtb -o socfpga.dtb socfpga.dts
