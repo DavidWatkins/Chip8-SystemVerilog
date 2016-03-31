@@ -2,8 +2,7 @@
  * Chip8-Framebuffer to VGA module. 
  * Adjusts the dimensions of the screen so that it appears 8 times larger.
  *
- * Levi Oliver -- lpo2105
- * Gabrielle Taylor -- gat2118
+ * Developed by Levi and Ash 
  *
  * Built off of Stephen Edwards's code
  * Columbia University
@@ -88,29 +87,39 @@
 	parameter chip_vend = 6'd 32; 
 
 	logic[11:0] fb_pos;
-	assign fb_pos = (((vcount[8:0]) >> (4'd3))*(7'd64)) + ((hcount[10:1]) >> (4'd3));
+	assign fb_pos = (((vcount[8:0] - top_bound) >> (4'd3))*(7'd64)) + ((hcount[10:1] - left_bound) >> (4'd3));
 
 
 	logic inChip;
    	//120 <= Y-dim < 360
    	//64 <= X-dim < 576
 
-   	/*
+		/*
    	*    +--------------------------------+
    	*    | VGA Screen (640x480)           |
    	*    |   64                      576  |
-	*    |    +----------------------+112 |
-	*    |    |      Chip8 Screen    |    |
-	*    |    |      (64*8x32*8)     |    |
-	*    |    +----------------------+368 |
-	*    |                                |
-	*    +--------------------------------+
+		*    |    +----------------------+112 |
+		*    |    |      Chip8 Screen    |    |
+		*    |    |      (64*8x32*8)     |    |
+		*    |    +----------------------+368 |
+		*    |                                |
+		*    +--------------------------------+
    	*/
-   	assign inChip = (((hcount[10:1]) >= (chip_hend * (5'd8) + 7'd64)) & (((hcount[10:1]) < (chip_hend * (5'd8) + 10'd576)) &
-   			((vcount[8:0]) >= (chip_vend * (5'd8) + 7'd112))  & ((vcount[8:0]) < (chip_vend * (5'd8) + 10'd368));
-
-
-   	always_comb begin
+//   	assign inChip = (((hcount[10:1]) >= (chip_hend * (5'd8) + 7'd64)) & (((hcount[10:1]) < (chip_hend * (5'd8) + 10'd576)) &
+//   			((vcount[8:0]) >= (chip_vend * (5'd8) + 7'd112))  & ((vcount[8:0]) < (chip_vend * (5'd8) + 10'd368));
+		
+		
+		parameter left_bound = 7'd64;
+		parameter right_bound = 10'd576;
+		parameter top_bound = 7'd112;
+		parameter bottom_bound = 9'd368;
+		assign inChip = (	((hcount[10:1]) >= (left_bound)) &
+								((hcount[10:1]) <  (right_bound))	&
+								((vcount[8:0])  >= (top_bound)) &
+								((vcount[8:0])) <  (bottom_bound)	);
+		
+		
+   always_comb begin
 	  	{VGA_R, VGA_G, VGA_B} = {8'h0, 8'h0, 8'h0}; // Black
 	  	if (inChip & framebuffer[fb_pos]) begin
 	  		//White to show on-pixel
