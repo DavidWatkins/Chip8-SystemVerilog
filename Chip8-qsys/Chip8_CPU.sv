@@ -22,6 +22,7 @@ module Chip8_CPU(	input logic cpu_clk,
 		
 		//always_ff @(posedge cpu_clk) begin
 		always_comb begin
+			/*DEFAULT WIRE VALUES BEGIN*/
 			alu_in1 = 16'b0;
 			alu_in2 = 16'b0;
 			alu_cmd = 4'b0;
@@ -32,11 +33,14 @@ module Chip8_CPU(	input logic cpu_clk,
 			reg_WE1 = 1'b0;
 			reg_WE2 = 1'b0;
 			reg_WEVF = 1'b0;
-			reg_addr1 = 4'b0;
-			reg_addr2 = 4'b0;
-			testOut1 = 8'b0;
-			testOut2 = 8'b0;
+			reg_addr1 = testIn1;
+			reg_addr2 = testIn2;
+			testOut1 = reg_readdata1;
+			testOut2 = reg_readdata2;
+			/*END DEFAULT VALUES*/
 			
+			
+			/*BEGIN INSTRUCTION DECODE*/
 			if((instruction[15:12]) == (4'd6)) begin
 			//6ykk : Vy = kk
 				reg_addr1 = instruction[11:8];
@@ -48,16 +52,8 @@ module Chip8_CPU(	input logic cpu_clk,
 				reg_addr2 = instruction[ 7:4]; //Vy
 				reg_writedata1 = reg_readdata2;
 				reg_WE1 = 1'b1; 
-			end else begin
-				reg_WE1 = 1'b0;
-				reg_WE2 = 1'b0;
-				reg_WEVF = 1'b0;
-				reg_addr1 = testIn1;
-				reg_addr2 = testIn2;
-				testOut1 = reg_readdata1;
-				testOut2 = reg_readdata2;
-			end
-				
+			end 
+			/*END INSTRUCTION DECODE*/
 				
 		end
 	
