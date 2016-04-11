@@ -5,8 +5,7 @@
 //MOdified as needed
 
 /* Audio_top.sv
-Contains the top-level audio controller. Instantiates sprite ROM blocks and
-communicates with the avalon bus */
+Contains the top-level audio controller. */
 
 module Audio_top (
     input  OSC_50_B8A,   //reference clock
