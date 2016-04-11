@@ -6,10 +6,9 @@ module bcd(
 	
 	logic [19:0] shift;
 
-	always @ (num) begin
+	always_comb begin
 		shift[19:8] = 11'd0;
 		shift[7:0] = num;
-
 		repeat (8) begin
 			if(shift[11:8] >= 3'd5)
 				shift[11:8] = shift[11:8] + 3'd3;
@@ -24,6 +23,5 @@ module bcd(
 		tens     = shift[15:12];
 		ones     = shift[11:8];
 	end
-	
 
 endmodule
