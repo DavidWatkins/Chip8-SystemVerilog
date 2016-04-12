@@ -21,10 +21,12 @@ Where a chip8 file is a .chip8 rom file found on many websites.
 
 ##Running
 The controls for the chip8 are:
+```txt
 +---------+
 | 1 2 3 4 |
 | q w e r |
 | a s d f |
 | z x c v |
 +---------+
+```
 The display will be outputted via the VGA port on the SoCKit board and is controlled using a USB Keyboard plugged into the board. To pause the game press 'p', to start a rom file press 'enter', and to load a new file press 'l'. 
