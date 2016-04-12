@@ -2,14 +2,14 @@
 Implemented a Chip8 Emulator in SystemVerilog meant to run on an Altera SoCKit Cyclone V board
 
 ##Software
-- [https://dl.altera.com/13.1/?edition=web](Quartus 13.1)
-- [https://dl.altera.com/13.1/?edition=web](Cyclone V Device Drivers)
-- [https://rocketboards.org/foswiki/view/Projects/SoCKitLinaroLinuxDesktop#A_42Run_the_demo_using_the_provided_SD_Card_Image_42](Linaro Linux)
+- [Quartus 13.1](https://dl.altera.com/13.1/?edition=web)
+- [Cyclone V Device Drivers](https://dl.altera.com/13.1/?edition=web)
+- [Linaro Linux](https://rocketboards.org/foswiki/view/Projects/SoCKitLinaroLinuxDesktop#A_42Run_the_demo_using_the_provided_SD_Card_Image_42)
 
 ##Setup
 Follow the following two tutorials to get linux running on the SoCKit board
-- [https://rocketboards.org/foswiki/view/Projects/SoCKitLinaroLinuxDesktop#A_42Run_the_demo_using_the_provided_SD_Card_Image_42](Linaro Linux Setup)
-- [https://rocketboards.org/foswiki/view/Documentation/GSRD141ProgrammingFPGAArrowSoCKitEdition](Creating u-boot-scr)
+- [Linaro Linux Setup](https://rocketboards.org/foswiki/view/Projects/SoCKitLinaroLinuxDesktop#A_42Run_the_demo_using_the_provided_SD_Card_Image_42)
+- [Creating u-boot-scr](https://rocketboards.org/foswiki/view/Documentation/GSRD141ProgrammingFPGAArrowSoCKitEdition)
 
 Then copy the code in chip8-sw to the device and compile it there by calling make. Open Quartus and compile the Chip8.qpf project. Using the programmar load the sockit_top.sof file onto the device and boot the version of linux installed on the sd card. To install the chip8-sw:
 ```bash
