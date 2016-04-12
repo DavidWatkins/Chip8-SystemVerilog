@@ -549,28 +549,28 @@ module SoCKit_Top(
    //	For Audio CODEC
    wire 					      AUD_CTRL_CLK;	//	For Audio Controller
 
-   reg [31:0] 					      Cont;
+   reg [31:0] 					Cont;
    wire 					      VGA_CTRL_CLK;
-   wire [9:0] 					      mVGA_R;
-   wire [9:0] 					      mVGA_G;
-   wire [9:0] 					      mVGA_B;
-   wire [19:0] 					      mVGA_ADDR;
+   wire [9:0] 					mVGA_R;
+   wire [9:0] 					mVGA_G;
+   wire [9:0] 					mVGA_B;
+   wire [19:0] 				mVGA_ADDR;
    wire 					      DLY_RST;
 
    //	For VGA Controller
    wire 					      mVGA_CLK;
-   wire [9:0] 					      mRed;
-   wire [9:0] 					      mGreen;
-   wire [9:0] 					      mBlue;
+   wire [9:0] 					mRed;
+   wire [9:0] 					mGreen;
+   wire [9:0] 					mBlue;
    wire 					      VGA_Read;	//	VGA data request
 
-   wire [9:0] 					      recon_VGA_R;
-   wire [9:0] 					      recon_VGA_G;
-   wire [9:0] 					      recon_VGA_B;
+   wire [9:0] 					recon_VGA_R;
+   wire [9:0] 					recon_VGA_G;
+   wire [9:0] 					recon_VGA_B;
 
    //	For Down Sample
-   wire [3:0] 					      Remain;
-   wire [9:0] 					      Quotient;
+   wire [3:0] 					Remain;
+   wire [9:0] 					Quotient;
 
    wire 					      AUD_MUTE;
 
@@ -586,7 +586,7 @@ module SoCKit_Top(
       hps_reset_counter <= hps_reset_counter + 1;
    end        
       
-   lab3 u0 (
+   Chip8 u0 (
             .clk_clk                               (OSC_50_B4A),                      //                 clk.clk
             .reset_reset_n                         (hps_fpga_reset_n),                 //                 reset.reset_n
             .memory_mem_a                          (memory_mem_a),                    //                 memory.mem_a
@@ -655,14 +655,14 @@ module SoCKit_Top(
             .hps_io_hps_io_uart0_inst_TX     		  (hps_io_hps_io_uart0_inst_TX),     //                .hps_io_uart0_inst_TX
             .hps_io_hps_io_i2c1_inst_SDA     		  (hps_io_hps_io_i2c1_inst_SDA),     //                .hps_io_i2c1_inst_SDA
             .hps_io_hps_io_i2c1_inst_SCL     		  (hps_io_hps_io_i2c1_inst_SCL),      //                .hps_io_i2c1_inst_SCL
-				.vga_R (VGA_R),
-				.vga_G (VGA_G),
-				.vga_B (VGA_B),
-				.vga_CLK (VGA_CLK),
-				.vga_HS (VGA_HS),
-				.vga_VS (VGA_VS),
-				.vga_BLANK_n (VGA_BLANK_n),
-				.vga_SYNC_n (VGA_SYNC_n)
+			.vga_R (VGA_R),
+			.vga_G (VGA_G),
+			.vga_B (VGA_B),
+			.vga_CLK (VGA_CLK),
+			.vga_HS (VGA_HS),
+			.vga_VS (VGA_VS),
+			.vga_BLANK_n (VGA_BLANK_n),
+			.vga_SYNC_n (VGA_SYNC_n)
 	    );
 
 endmodule

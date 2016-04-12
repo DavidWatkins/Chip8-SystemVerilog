@@ -46,74 +46,68 @@ struct chip8_dev {
 /*
  * Writes an opcode (defined in chip8driver.h) to the device
  */
-static void write_op(unsigned int opcode) {
-	iowrite32(opcode, dev.virtbase);
+static void write_op(unsigned int addr, unsigned int instruction) {
+	iowrite32(instruction, dev.virtbase + addr);
 }
 
 /*
  * Reads a value after sending a proper write opcode to the device
  */
-static void read_value(unsigned int *value) {
-	ioread32(value);
+static int read_value(unsigned int addr) {
+	return ioread32(dev.virtbase + addr);
 }
+
 
 /*
-* Checks to see if the opcode is validly formatted
-* Need to create a more robust test, including check values
+* Checks to see if the address is validly formatted
 */
-static int isValidWriteOpcode(unsigned int opcode) {
-	return (opcode & (V0_WRITE_ADDR << 16)
-		|| (opcode & (V1_WRITE_ADDR << 16)
-		|| (opcode & (V2_WRITE_ADDR << 16)
-		|| (opcode & (V3_WRITE_ADDR << 16)
-		|| (opcode & (V4_WRITE_ADDR << 16)
-		|| (opcode & (V5_WRITE_ADDR << 16)
-		|| (opcode & (V6_WRITE_ADDR << 16)
-		|| (opcode & (V7_WRITE_ADDR << 16)
-		|| (opcode & (V8_WRITE_ADDR << 16)
-		|| (opcode & (V9_WRITE_ADDR << 16)
-		|| (opcode & (VA_WRITE_ADDR << 16)
-		|| (opcode & (VB_WRITE_ADDR << 16)
-		|| (opcode & (VC_WRITE_ADDR << 16)
-		|| (opcode & (VD_WRITE_ADDR << 16)
-		|| (opcode & (VE_WRITE_ADDR << 16)
-		|| (opcode & (VF_WRITE_ADDR << 16)
-		|| (opcode & (I_WRITE_ADDR << 16)
-		|| (opcode & (SOUND_TIMER_WRITE_ADDR << 16)
-		|| (opcode & (DELAY_TIMER_WRITE_ADDR << 16)
-		|| (opcode & (STACK_POINTER_WRITE_ADDR << 16)
-		|| (opcode & (PROGRAM_COUNTER_WRITE_ADDR << 16)
-		|| (opcode & (KEY_PRESS_ADDR << 16)
-		|| (opcode & (STATE_WRITE_ADDR << 16)
-		|| (opcode & (MEMORY_WRITE_ADDR << 16)
-		|| (opcode & (FRAMEBUFFER_ADDR << 16);
+static int isValidInstruction(unsigned int addr, unsigned int instruction, int isWrite) {
+	switch(addr) {
+		//Register instructions are always okay
+		case V0_ADDR: return 1;
+		case V1_ADDR: return 1;
+		case V2_ADDR: return 1;
+		case V3_ADDR: return 1;
+		case V4_ADDR: return 1;
+		case V5_ADDR: return 1;
+		case V6_ADDR: return 1;
+		case V7_ADDR: return 1;
+		case V8_ADDR: return 1;
+		case V9_ADDR: return 1;
+		case VA_ADDR: return 1;
+		case VB_ADDR: return 1;
+		case VC_ADDR: return 1;
+		case VD_ADDR: return 1;
+		case VE_ADDR: return 1;
+		case VF_ADDR: return 1;
+		case I_ADDR:  return 1;
+
+		//Timer instructions are always okay
+		case SOUND_TIMER_ADDR: return 1;
+		case DELAY_TIMER_ADDR: return 1;
+
+		//Stack instructions are only valid if they conform to stack size
+		//Always looks at last three nibbles
+		case STACK_POINTER_ADDR: return !isWrite || (instruction >= 0 && instruction < 64);
+		case STACK_ADDR: 		 return 1;
+
+		//Program Counter will always look at the last 3 nibbles
+		case PROGRAM_COUNTER_ADDR: return 1;
+
+		//Always considers last nibble
+		case KEY_PRESS_ADDR: return 1;
+
+		//Make sure X, Y, and data values conform
+		//Data value will always be 1 byte
+		case FRAMEBUFFER_ADDR: 
+			return ((instruction & 0xFF0000) >> 16) < MAX_FBX &&
+				   ((instruction & 0x00FF00) >> 8 ) < MAX_FBY;
+		default: break;
+	}
+
+	return (addr & MEMORY_ADDR);
 }
 
-static int isValidReadOpcode(unsigned int opcode) {
-	return (opcode & (V0_READ_ADDR << 16))
-		|| (opcode & (V1_READ_ADDR << 16))
-		|| (opcode & (V2_READ_ADDR << 16))
-		|| (opcode & (V3_READ_ADDR << 16))
-		|| (opcode & (V4_READ_ADDR << 16))
-		|| (opcode & (V5_READ_ADDR << 16))
-		|| (opcode & (V6_READ_ADDR << 16))
-		|| (opcode & (V7_READ_ADDR << 16))
-		|| (opcode & (V8_READ_ADDR << 16))
-		|| (opcode & (V9_READ_ADDR << 16))
-		|| (opcode & (VA_READ_ADDR << 16))
-		|| (opcode & (VB_READ_ADDR << 16))
-		|| (opcode & (VC_READ_ADDR << 16))
-		|| (opcode & (VD_READ_ADDR << 16))
-		|| (opcode & (VE_READ_ADDR << 16))
-		|| (opcode & (VF_READ_ADDR << 16))
-		|| (opcode & (I_READ_ADDR << 16))
-		|| (opcode & (SOUND_TIMER_READ_ADDR << 16))
-		|| (opcode & (DELAY_TIMER_READ_ADDR << 16))
-		|| (opcode & (STACK_POINTER_READ_ADDR << 16))
-		|| (opcode & (PROGRAM_COUNTER_READ_ADDR << 16))
-		|| (opcode & (STATE_READ_ADDR << 16))
-		|| (opcode & (MEMORY_READ_ADDR << 16));
-}
 
 /*
  * Handle ioctl() calls from userspace:
@@ -128,7 +122,7 @@ static long chip8_ioctl(struct file *f, unsigned int cmd, unsigned long arg)
 	case CHIP8_WRITE_ATTR:
 		if (copy_from_user(&op, (chip8_opcode *) arg, sizeof(chip8_opcode)))
 			return -EACCES;
-		if (!isValidWriteOpcode(op.opcode))
+		if (!isValidInstruction(op.addr, op.data, 1))
 			return -EINVAL;
 		write_op(op.opcode);
 		break;
@@ -136,11 +130,10 @@ static long chip8_ioctl(struct file *f, unsigned int cmd, unsigned long arg)
 	case CHIP8_READ_ATTR:
 		if (copy_from_user(&op, (chip8_opcode *) arg, sizeof(chip8_opcode)))
 			return -EACCES;
-		if (!isValidReadOpcode(op.opcode))
+		if (!!isValidInstruction(op.addr, op.data, 0))
 			return -EINVAL;
 
-		iowrite32(op.opcode);
-		ioread32(&(op.opcode));
+		op.readdata = ioread32(op.addr);
 		if (copy_to_user((chip8_opcode *) arg, &op, sizeof(chip8_opcode)))
 			return -EACCES;
 		break;

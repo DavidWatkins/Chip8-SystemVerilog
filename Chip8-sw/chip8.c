@@ -46,16 +46,6 @@ int chip8_fd;
 struct libusb_device_handle *keyboard;
 uint8_t endpoint_address;
 
-// /* Read and print the segment values */
-// void print_ball_info() {
-// 	vga_ball_arg_t vba;
-// 	if(ioctl(vga_ball_fd, VGA_BALL_READ_ATTR, &vba)) {
-// 		perror("ioctl(VGA_BALL_READ_ATTR) failed");
-// 		return;
-// 	}
-// 	printf("Ball at pos (%d, %d) with radius %d\n", vba.xpos, vba.ypos, vba.radius);
-// }
-
 void quit_program(int signal) {
 	printf("Chip8 is terminating\n");
 	close(chip8_fd);
@@ -69,6 +59,13 @@ void chip8_write(chip8_opcode *op) {
 	}
 }
 
+void chip8_read(chip8_opcode *op) {
+	if(ioctl(chip8_fd, CHIP8_READ_ATTR, op)) {
+		perror("ioctl(CHIP8_READ_ATTR) failed");
+		quit_program(0);
+	}
+}
+
 /*
 * Load the font set onto the chip8 sequentially
 * Uses the op codes specified in chip8driver.h
@@ -77,10 +74,12 @@ void loadfontset() {
 	int i;
 	for(i = 0; i < FONTSET_LENGTH; ++i) {
 		chip8_opcode op;
-		op.opcode = MEMORY_WRITE_ADDR | CHIP8_FONTSET[i];
-		op.opcode = (op.opcode << 16) | i;
+		op.addr = MEMORY_ADDR | i;
+		op.data = CHIP8_FONTSET[i];
 
 		chip8_write(&op);
+		// chip8_read(&op);
+		// printf("Read: %d\n", op.readdata);
 	}
 }
 
@@ -103,8 +102,8 @@ void loadROM(const char* romfilename) {
 		fread((&buffer), 1, 1, romfile); 
 
 		chip8_opcode op;
-		op.opcode = MEMORY_WRITE_ADDR | buffer;
-		op.opcode = (op.opcode << 16) | (i + MEMORY_START);
+		op.addr = MEMORY_ADDR | (MEMORY_START + i);
+		op.data = buffer;
 
 		chip8_write(&op);
 	}
@@ -114,14 +113,16 @@ void loadROM(const char* romfilename) {
 
 void startChip8() {
 	chip8_opcode op;
-	op.opcode = (STATE_WRITE_ADDR << 16) | RUNNING_STATE;
+	op.addr = STATE_ADDR;
+	op.data = RUNNING_STATE;
 
 	chip8_write(&op);
 }
 
 void pauseChip8() {
 	chip8_opcode op;
-	op.opcode = (STATE_WRITE_ADDR << 16) | PAUSED_STATE;
+	op.addr = STATE_ADDR;
+	op.data = PAUSED_STATE;
 
 	chip8_write(&op);
 }
@@ -133,7 +134,8 @@ void resetChip8() {
 
 void chip8writekeypress(char val, unsigned int ispressed) {
 	chip8_opcode op;
-	op.opcode = (KEY_PRESS_ADDR << 16) | (ispressed << 4) | val;
+	op.addr = KEY_PRESS_ADDR;
+	op.data = (ispressed << 4) | val;
 	chip8_write(&op);
 }
 
