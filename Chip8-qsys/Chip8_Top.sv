@@ -58,9 +58,13 @@ module Chip8_Top(
 
 	always_ff @(posedge clk) begin : proc_
 		if(reset) begin
-			 //Add initial values for code
-			 pc <= 15'h200;
+			//Add initial values for code
+			pc <= 15'h200;
 
+			fbwrite <= 1'b0;
+			memWE1 <= 1'b0;
+			memWE2 <= 1'b0;
+			state <= 2'h0;
 		//Handle input from the ARM processor
 		end else if(chipselect) begin
 			if(address[16]) begin
