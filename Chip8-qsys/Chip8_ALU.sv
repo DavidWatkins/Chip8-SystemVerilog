@@ -4,7 +4,7 @@
  * Developed by Ash
  */
  
- module chip8_ALU(
+ module Chip8_ALU(
 		input logic[15:0] input1, input2,
 		input logic[3:0] sel,
 		

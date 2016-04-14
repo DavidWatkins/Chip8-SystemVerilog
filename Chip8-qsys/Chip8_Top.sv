@@ -64,12 +64,12 @@ module Chip8_Top(
 		//Handle input from the ARM processor
 		end else if(chipselect) begin
 			if(address[16]) begin
-				memaddr1 <= address[11:0];
-				data_out <= memreaddata1;
-				if(write) begin
-					memWE1 <= 1'b1;
-					memwritedata1 <= writedata[7:0];
-				end
+				//memaddr1 <= address[11:0];
+				//data_out <= memreaddata1;
+				//if(write) begin
+				//	memWE1 <= 1'b1;
+				//	memwritedata1 <= writedata[7:0];
+				//end
 			end else begin
 				case (address) 
 				

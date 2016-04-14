@@ -98,11 +98,12 @@ module Chip8_CPU(	input logic cpu_clk,
 				alu_cmd = 4'h8;
 				//prog counter is incread by 2
 			end else if((instruction[15:12] == 4'hA)) begin //Annn
-				instruction = instruction[11:0];
+				//instruction = instruction[11:0];
+				//Need to pass in the i register
 			end else if((instruction[15:12] == 4'hB)) begin //Bnnn
 				alu_in1 = instruction[11:0]; //?
 				reg_addr1 = 4'h0;
-				alu_in2 = regwritedata1;
+				alu_in2 = reg_writedata1;
 				alu_cmd = 4'h4;
 				//program counter = alu_out;
 			end else if((instruction[15:12] == 4'hC)) begin //Cxkk
@@ -124,7 +125,7 @@ module Chip8_CPU(	input logic cpu_clk,
 			end else if((instruction[15:12] == 4'hF) & (instruction[7:0] == 8'h1E)) begin //Fx1E
 				alu_in1 = instruction; //?
 				reg_addr1 = instruction[11:8];
-				alu_in2 = readdata1;
+				alu_in2 = reg_readdata1;
 				alu_cmd = 4'h4;
 				//i register?
 			end else if((instruction[15:12] == 4'hF) & (instruction[7:0] == 8'h29)) begin //Fx29
