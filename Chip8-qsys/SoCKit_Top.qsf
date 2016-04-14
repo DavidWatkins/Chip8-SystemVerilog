@@ -309,24 +309,6 @@ set_location_assignment PIN_AH5 -to VGA_R[6]
 set_location_assignment PIN_AJ1 -to VGA_R[7]
 set_location_assignment PIN_AG2 -to VGA_SYNC_n
 set_location_assignment PIN_AC12 -to VGA_VS
-set_global_assignment -name SOURCE_FILE Chip8.cmp
-set_global_assignment -name SYSTEMVERILOG_FILE clk_div.sv
-set_global_assignment -name SYSTEMVERILOG_FILE Chip8_VGA_Emulator.sv
-set_global_assignment -name SYSTEMVERILOG_FILE Chip8_Top.sv
-set_global_assignment -name SYSTEMVERILOG_FILE Chip8_register_file.sv
-set_global_assignment -name SYSTEMVERILOG_FILE Chip8_rand_num_generator.sv
-set_global_assignment -name SYSTEMVERILOG_FILE Chip8_memory.sv
-set_global_assignment -name SYSTEMVERILOG_FILE Chip8_framebuffer.sv
-set_global_assignment -name SYSTEMVERILOG_FILE Chip8_CPU.sv
-set_global_assignment -name SYSTEMVERILOG_FILE Chip8_ALU.sv
-set_global_assignment -name SYSTEMVERILOG_FILE "Chip8-SoundController.sv"
-set_global_assignment -name SYSTEMVERILOG_FILE "Chip8-Registers.sv"
-set_global_assignment -name SYSTEMVERILOG_FILE "Chip8-ControlUnit.sv"
-set_global_assignment -name SYSTEMVERILOG_FILE bcd.sv
-set_global_assignment -name VERILOG_FILE SoCKit_top.v
-set_global_assignment -name PARTITION_NETLIST_TYPE SOURCE -section_id Top
-set_global_assignment -name PARTITION_FITTER_PRESERVATION_LEVEL PLACEMENT_AND_ROUTING -section_id Top
-set_global_assignment -name PARTITION_COLOR 16764057 -section_id Top
 set_instance_assignment -name IO_STANDARD "SSTL-15 CLASS I" -to memory_oct_rzqin -tag __hps_sdram_p0
 set_instance_assignment -name IO_STANDARD "SSTL-15 CLASS I" -to memory_mem_dq[0] -tag __hps_sdram_p0
 set_instance_assignment -name INPUT_TERMINATION "PARALLEL 50 OHM WITH CALIBRATION" -to memory_mem_dq[0] -tag __hps_sdram_p0
@@ -599,4 +581,23 @@ set_instance_assignment -name GLOBAL_SIGNAL OFF -to u0|hps_0|hps_io|border|hps_s
 set_instance_assignment -name GLOBAL_SIGNAL OFF -to u0|hps_0|hps_io|border|hps_sdram_inst|p0|umemphy|uread_datapath|reset_n_fifo_wraddress[3] -tag __hps_sdram_p0
 set_instance_assignment -name ENABLE_BENEFICIAL_SKEW_OPTIMIZATION_FOR_NON_GLOBAL_CLOCKS ON -to u0|hps_0|hps_io|border|hps_sdram_inst -tag __hps_sdram_p0
 set_instance_assignment -name PLL_COMPENSATION_MODE DIRECT -to u0|hps_0|hps_io|border|hps_sdram_inst|pll0|fbout -tag __hps_sdram_p0
+set_global_assignment -name SYSTEMVERILOG_FILE Chip8_Top_test.sv
+set_global_assignment -name SOURCE_FILE Chip8.cmp
+set_global_assignment -name SYSTEMVERILOG_FILE clk_div.sv
+set_global_assignment -name SYSTEMVERILOG_FILE Chip8_VGA_Emulator.sv
+set_global_assignment -name SYSTEMVERILOG_FILE Chip8_Top.sv
+set_global_assignment -name SYSTEMVERILOG_FILE Chip8_register_file.sv
+set_global_assignment -name SYSTEMVERILOG_FILE Chip8_rand_num_generator.sv
+set_global_assignment -name SYSTEMVERILOG_FILE Chip8_memory.sv
+set_global_assignment -name SYSTEMVERILOG_FILE Chip8_framebuffer.sv
+set_global_assignment -name SYSTEMVERILOG_FILE Chip8_CPU.sv
+set_global_assignment -name SYSTEMVERILOG_FILE Chip8_ALU.sv
+set_global_assignment -name SYSTEMVERILOG_FILE "Chip8-SoundController.sv"
+set_global_assignment -name SYSTEMVERILOG_FILE "Chip8-Registers.sv"
+set_global_assignment -name SYSTEMVERILOG_FILE "Chip8-ControlUnit.sv"
+set_global_assignment -name SYSTEMVERILOG_FILE bcd.sv
+set_global_assignment -name VERILOG_FILE SoCKit_top.v
+set_global_assignment -name PARTITION_NETLIST_TYPE SOURCE -section_id Top
+set_global_assignment -name PARTITION_FITTER_PRESERVATION_LEVEL PLACEMENT_AND_ROUTING -section_id Top
+set_global_assignment -name PARTITION_COLOR 16764057 -section_id Top
 set_instance_assignment -name PARTITION_HIERARCHY root_partition -to | -section_id Top
