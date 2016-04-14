@@ -147,7 +147,7 @@ module Chip8_Top(
 							.write(fbwrite),
 							.*);	
 
-	Chip8_memory memory(.cpu_clk(clk),
+	/*Chip8_memory memory(.cpu_clk(clk),
 					.writedata1(memwritedata1),
 					.writedata2(memwritedata2),
 					.WE1(memWE1),
@@ -155,7 +155,9 @@ module Chip8_Top(
 					.addr1(memaddr1),
 					.addr2(memaddr2),
 					.readdata1(memreaddata1),
-					.readdata2(memreaddata2));
+					.readdata2(memreaddata2));*/
+	memory memory(memaddr1, memaddr2, clk, memwritedata1, memwritedata2,
+					memWE1, memWE2, memreaddata1, memreaddata2);
 
 	Chip8_CPU cpu(	.cpu_clk(clk),
 					.instruction(cpu_instruction),
