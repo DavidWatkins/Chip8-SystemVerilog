@@ -10,16 +10,19 @@ module Chip8_CPU(	input logic cpu_clk,
 		wire[15:0] alu_in1, alu_in2, alu_out;
 		wire[3:0] alu_cmd;
 		wire alu_carry;
-		wire[7:0] reg_writedata1, reg_writedata2, reg_VFwritedata;
-		wire reg_WE1, reg_WE2, reg_WEVF;
+		wire[7:0] reg_writedata1, reg_writedata2;
+		wire reg_WE1, reg_WE2;
 		wire[3:0] reg_addr1, reg_addr2;
-		wire[7:0] reg_readdata1, reg_readdata2, reg_VFreaddata;
+		wire[7:0] reg_readdata1, reg_readdata2;
 		
 		Chip8_ALU alu(alu_in1, alu_in2, alu_cmd, alu_out, alu_carry);
-		Chip8_register_file register_file(cpu_clk, reg_writedata1, reg_writedata2, reg_VFwritedata,
-			reg_WE1, reg_WE2, reg_WEVF, reg_addr1, reg_addr2,
-			reg_readdata1, reg_readdata2, reg_VFreaddata);
-		
+//		Chip8_register_file register_file(cpu_clk, reg_writedata1, reg_writedata2, reg_VFwritedata,
+//			reg_WE1, reg_WE2, reg_WEVF, reg_addr1, reg_addr2,
+//			reg_readdata1, reg_readdata2, reg_VFreaddata);
+	
+		reg_file register_file(reg_addr1, reg_addr2, cpu_clk, 
+				reg_writedata1, reg_writedata2, reg_WE1, reg_WE2, 
+				reg_readdata1, reg_readdata2);
 		//always_ff @(posedge cpu_clk) begin
 		always_comb begin
 			/*DEFAULT WIRE VALUES BEGIN*/
@@ -29,10 +32,8 @@ module Chip8_CPU(	input logic cpu_clk,
 			alu_carry = 1'b0;
 			reg_writedata1 = 8'b0;
 			reg_writedata2 = 8'b0;
-			reg_VFwritedata = 8'b0;
 			reg_WE1 = 1'b0;
 			reg_WE2 = 1'b0;
-			reg_WEVF = 1'b0;
 			reg_addr1 = testIn1;
 			reg_addr2 = testIn2;
 			testOut1 = reg_readdata1;
@@ -56,11 +57,13 @@ module Chip8_CPU(	input logic cpu_clk,
 				//if reg Vx != kk, prog counter + 4
 			end else if((instruction[15:12]) == (4'h5)) begin //5xy0
 				//if vx = vy, prog counter + 8
-			if((instruction[15:12]) == (4'h6)) begin
+			end else if((instruction[15:12]) == (4'h6)) begin
 			//6ykk : Vy = kk
 				reg_addr1 = instruction[11:8];
 				reg_writedata1 = instruction[7:0];
 				reg_WE1 = 1'b1;
+				testOut1 = instruction[7:0];
+				testOut2 = 8'b0;
 			end else if((instruction[15:12]) == (4'h7)) begin //7xkk
 				reg_addr1 = instruction[11:8];
 				alu_in1 = instruction[7:0];
@@ -68,7 +71,7 @@ module Chip8_CPU(	input logic cpu_clk,
 				alu_cmd = 4'h4;
 				reg_writedata1 = alu_out;
 				reg_WE1 = 1'b1;
-			end else if((instruction[15:12] == 4'h8) & (~|instruction[3:0]))
+			end else if((instruction[15:12] == 4'h8) & (~|instruction[3:0])) begin
 				//8xy0 : Vx = Vy
 				reg_addr1 = instruction[11:8]; //Vx
 				reg_addr2 = instruction[ 7:4]; //Vy
@@ -84,6 +87,8 @@ module Chip8_CPU(	input logic cpu_clk,
 				reg_writedata1 = alu_out;
 				//VF write??
 				reg_WE1 = 1'b1; 
+				testOut1 = alu_out[7:0];
+				testOut2 = reg_readdata2;
 			end else if((instruction[15:12] == 4'h8) & (instruction[3:0] == (4'h6))) begin
 			 	//8xy6
 			end else if((instruction[15:12] == 4'h8) & (instruction[3:0] <= (4'h7))) begin
@@ -137,7 +142,12 @@ module Chip8_CPU(	input logic cpu_clk,
 				//store registers V0 through Vx in memory starting at location I
 			end else if((instruction[15:12] == 4'hF) & (instruction[7:0] == 8'h65)) begin //Fx65
 				//read registers V0 through Vx in memory starting at location I
-			end 
+			end else begin
+				reg_addr1 = testIn1;
+				reg_addr2 = testIn2;
+				testOut1 = reg_readdata1;
+				testOut2 = reg_readdata2;
+			end
 
 			/*END INSTRUCTION DECODE*/
 				
