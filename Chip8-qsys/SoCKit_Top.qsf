@@ -595,8 +595,8 @@ set_instance_assignment -name GLOBAL_SIGNAL OFF -to u0|hps_0|hps_io|border|hps_s
 set_instance_assignment -name GLOBAL_SIGNAL OFF -to u0|hps_0|hps_io|border|hps_sdram_inst|p0|umemphy|uread_datapath|reset_n_fifo_wraddress[3] -tag __hps_sdram_p0
 set_instance_assignment -name ENABLE_BENEFICIAL_SKEW_OPTIMIZATION_FOR_NON_GLOBAL_CLOCKS ON -to u0|hps_0|hps_io|border|hps_sdram_inst -tag __hps_sdram_p0
 set_instance_assignment -name PLL_COMPENSATION_MODE DIRECT -to u0|hps_0|hps_io|border|hps_sdram_inst|pll0|fbout -tag __hps_sdram_p0
+set_global_assignment -name SYSTEMVERILOG_FILE Testbenches/delay_timer_testbench.sv
+set_global_assignment -name SYSTEMVERILOG_FILE Chip8_Timers/delay_timer.sv
 set_global_assignment -name EDA_TEST_BENCH_FILE Chip8_CPU_testbench.sv -section_id Chip8_CPU_testbench
-set_global_assignment -name EDA_TEST_BENCH_FILE delay_timer_testbench.sv -section_id delay_timer_testbench
-set_global_assignment -name SYSTEMVERILOG_FILE delay_timer.sv
-set_global_assignment -name SYSTEMVERILOG_FILE delay_timer_testbench.sv
+set_global_assignment -name EDA_TEST_BENCH_FILE Testbenches/delay_timer_testbench.sv -section_id delay_timer_testbench
 set_instance_assignment -name PARTITION_HIERARCHY root_partition -to | -section_id Top
