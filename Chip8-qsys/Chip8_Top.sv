@@ -28,8 +28,12 @@ module Chip8_Top(
 	output logic        VGA_CLK, VGA_HS, VGA_VS, VGA_BLANK_n,
 	output logic        VGA_SYNC_n);
 
-	logic [15:0] i, pc, sp;
+	logic [15:0] i, sp;
 	logic [511:0] stack;
+
+	//Program counter
+	logic [7:0] pc_state;
+	logic [15:0] pc;
 
 	//Framebuffer values
 	logic fbreset;

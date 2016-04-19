@@ -5,8 +5,6 @@ module Chip8_CPU(	input logic cpu_clk,
 						input logic[3:0] testIn1, testIn2,
 						output logic[7:0] testOut1, testOut2);
 
-		
-//		wire alu_in1, alu_in2, alu_cmd, alu_out, alu_carry;
 		logic[15:0] alu_in1, alu_in2, alu_out;
 		logic[3:0] alu_cmd;
 		logic alu_carry;
@@ -16,9 +14,6 @@ module Chip8_CPU(	input logic cpu_clk,
 		logic[7:0] reg_readdata1, reg_readdata2;
 		
 		Chip8_ALU alu(alu_in1, alu_in2, alu_cmd, alu_out, alu_carry);
-//		Chip8_register_file register_file(cpu_clk, reg_writedata1, reg_writedata2, reg_VFwritedata,
-//			reg_WE1, reg_WE2, reg_WEVF, reg_addr1, reg_addr2,
-//			reg_readdata1, reg_readdata2, reg_VFreaddata);
 	
 		reg_file register_file(reg_addr1, reg_addr2, cpu_clk, 
 				reg_writedata1, reg_writedata2, reg_WE1, reg_WE2, 
@@ -29,7 +24,6 @@ module Chip8_CPU(	input logic cpu_clk,
 			alu_in1 = 16'b0;
 			alu_in2 = 16'b0;
 			alu_cmd = 4'b0;
-			alu_carry = 1'b0;
 			reg_writedata1 = 8'b0;
 			reg_writedata2 = 8'b0;
 			reg_WE1 = 1'b0;

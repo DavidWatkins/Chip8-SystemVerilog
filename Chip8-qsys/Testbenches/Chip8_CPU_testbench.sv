@@ -1,4 +1,4 @@
-module testBench ( ) ;
+module Chip8_CPU_testbench ( ) ;
 	logic clk;
 	logic[15:0] instruction;
 	logic[3:0] testIn1, testIn2;
