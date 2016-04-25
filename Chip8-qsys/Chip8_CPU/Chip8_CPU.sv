@@ -35,6 +35,9 @@ module Chip8_CPU(	input logic cpu_clk,
 		
 		wire[15:0] rand_num; 
 		Chip8_rand_num_generator(cpu_clk, rand_num);
+		wire[7:0] to_bcd;
+		wire[3:0] bcd_hundreds, bcd_tens, bcd_ones;
+		bcd(to_bcd, bcd_hundreds, bcd_tens, bcd_ones);
 		Chip8_ALU alu(alu_in1, alu_in2, alu_cmd, alu_out, alu_carry);
 	
 //		reg_file register_file(reg_addr1, reg_addr2, cpu_clk, 
@@ -64,6 +67,7 @@ module Chip8_CPU(	input logic cpu_clk,
 			mem_addr2 = 12'b0;
 			mem_writedata1 = 8'b0;
 			mem_writedata2 = 8'b0;
+			to_bcd = 8'b0;
 			testOut1 = reg_readdata1;
 			testOut2 = reg_readdata2;
 			/*END DEFAULT VALUES*/
@@ -223,7 +227,12 @@ module Chip8_CPU(	input logic cpu_clk,
 				//@TODO: set 1 to location of sprite for digit Vx
 				reg_addr1 = instruction[11:8];
 			end else if((instruction[15:12] == 4'hF) & (instruction[7:0] == 8'h33)) begin //Fx33
-				//@TODO: store BCD representation of Vx in I, I+1, I+2
+				//store BCD representation of Vx in I, I+1, I+2
+				//NEEDS MULTIPLE CYCLESSSSS!
+				reg_addr1 = instruction[11:8];
+				to_bcd = reg_readdata1;
+				reg_I_writedata = {bcd_hundreds, bcd_tens, bcd_ones, 4'b0};
+				reg_I_WE = 1;
 			end else if((instruction[15:12] == 4'hF) & (instruction[7:0] == 8'h55)) begin //Fx44
 				//store registers V0 through Vx in memory starting at location I
 				//THIS is one of those multicycle instructions

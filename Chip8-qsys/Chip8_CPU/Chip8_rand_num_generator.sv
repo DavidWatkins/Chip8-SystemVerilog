@@ -8,7 +8,7 @@
 module Chip8_rand_num_generator(input logic cpu_clk, output logic[15:0] rand_num);
 	always_ff @(posedge cpu_clk) begin
 		if(~|(rand_num[15:0])) begin
-			rand_num[15:0] <= "1111010111010010";
+			rand_num[15:0] <= 16'b1111010111010010;
 		end else begin
 			rand_num[0] <= rand_num[15] ^ rand_num[14];
 			rand_num[1] <= rand_num[14] ^ rand_num[13];
