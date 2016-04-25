@@ -6,12 +6,16 @@ module Chip8_CPU(	input logic cpu_clk,
 						input logic[15:0] reg_I_readdata,
 						input logic[7:0] delay_timer_readdata,
 						
+						input logic[11:0] PC_readdata,
 						input logic[3:0] CONTROL,
 						
 						input logic[3:0] testIn1, testIn2,
 						
 						output logic delay_timer_WE, sound_timer_WE,
 						output logic[7:0] delay_timer_writedata, sound_timer_writedata,
+						
+						output logic PC_WE, skip_next_instr,
+						output logic[11:0] PC_writedata,
 						
 						output logic reg_WE1, reg_WE2,
 						output logic[3:0] reg_addr1, reg_addr2,
@@ -34,10 +38,10 @@ module Chip8_CPU(	input logic cpu_clk,
 //		logic[7:0] reg_readdata1, reg_readdata2;
 		
 		wire[15:0] rand_num; 
-		Chip8_rand_num_generator(cpu_clk, rand_num);
-		wire[7:0] to_bcd;
+		Chip8_rand_num_generator rand_num_generator(cpu_clk, rand_num);
+		logic[7:0] to_bcd;
 		wire[3:0] bcd_hundreds, bcd_tens, bcd_ones;
-		bcd(to_bcd, bcd_hundreds, bcd_tens, bcd_ones);
+		bcd binary_to_dec(to_bcd, bcd_hundreds, bcd_tens, bcd_ones);
 		Chip8_ALU alu(alu_in1, alu_in2, alu_cmd, alu_out, alu_carry);
 	
 //		reg_file register_file(reg_addr1, reg_addr2, cpu_clk, 
@@ -61,13 +65,16 @@ module Chip8_CPU(	input logic cpu_clk,
 			sound_timer_WE = 1'b0;
 			delay_timer_writedata = 8'b0;
 			sound_timer_writedata = 8'b0;
-			mem_WE1 = 1;
-			mem_WE2 = 1;
+			mem_WE1 = 0;
+			mem_WE2 = 0;
 			mem_addr1 = 12'b0;
 			mem_addr2 = 12'b0;
 			mem_writedata1 = 8'b0;
 			mem_writedata2 = 8'b0;
 			to_bcd = 8'b0;
+			PC_WE = 0;
+			PC_writedata = 12'b0;
+			skip_next_instr = 0;
 			testOut1 = reg_readdata1;
 			testOut2 = reg_readdata2;
 			/*END DEFAULT VALUES*/
@@ -78,17 +85,44 @@ module Chip8_CPU(	input logic cpu_clk,
 			if((instruction) == (16'he)) begin //00E0
 				//clear display
 			end else if((instruction) == (16'h00ee)) begin //00EE
-				//pop stack & set prog counter to that address
+				//@TODO: pop stack & set prog counter to that address
 			end else if((instruction[15:12]) == (4'h1)) begin //1nnn
 				//set program counter to nnn
+				PC_writedata = instruction[11:0];
+				PC_WE = 1;
 			end else if((instruction[15:12]) == (4'h2)) begin //2nnn
-				//push current prog counter to stack, set prog counter to nnn
+				//@TODO: push current prog counter to stack, set prog counter to nnn
 			end else if((instruction[15:12]) == (4'h3)) begin //3xkk
-				//if reg Vx = kk, prog counter + 4
+				//if reg Vx = kk, prog counter += 2
+				reg_addr1 = instruction[11:8];
+				if(reg_readdata1 == instruction[7:0]) begin
+					alu_in1 = PC_readdata;
+					alu_in2 = 16'd2;
+					alu_cmd = 4'h4;
+					PC_writedata = alu_out[11:0];
+					PC_WE = 1;
+				end
 			end else if((instruction[15:12]) == (4'h4)) begin //4xkk
-				//if reg Vx != kk, prog counter + 4
-			end else if((instruction[15:12]) == (4'h5)) begin //5xy0
-				//if vx = vy, prog counter + 8
+				//if reg Vx != kk, prog counter += 2
+				reg_addr1 = instruction[11:8];
+				if(reg_readdata1 != instruction[7:0]) begin
+					alu_in1 = PC_readdata;
+					alu_in2 = 16'd2;
+					alu_cmd = 4'h4;
+					PC_writedata = alu_out[11:0];
+					PC_WE = 1;
+				end
+			end else if(((instruction[15:12]) == (4'h5)) & (~|instruction[3:0])) begin //5xy0
+				//if vx = vy, prog counter += 4
+				reg_addr1 = instruction[11:8];
+				reg_addr2 = instruction[ 7:4];
+				if(reg_readdata1 == reg_readdata2) begin
+					alu_in1 = PC_readdata;
+					alu_in2 = 16'd4;
+					alu_cmd = 4'h4;
+					PC_writedata = alu_out[11:0];
+					PC_WE = 1;
+				end
 			end else if((instruction[15:12]) == (4'h6)) begin
 			//6ykk : Vy = kk
 				reg_addr1 = instruction[11:8];
@@ -97,6 +131,7 @@ module Chip8_CPU(	input logic cpu_clk,
 				testOut1 = instruction[7:0];
 				testOut2 = 8'b0;
 			end else if((instruction[15:12]) == (4'h7)) begin //7xkk
+				//7xkk: Vx = Vx + kk
 				reg_addr1 = instruction[11:8];
 				alu_in1 = instruction[7:0];
 				alu_in2 = reg_readdata1;
@@ -151,8 +186,8 @@ module Chip8_CPU(	input logic cpu_clk,
 				reg_WE1 = 1;
 				
 				//@TODO: VF need be set here?
-			end else if((instruction[15:12] == 4'h8) & (instruction[3:0] <= (4'h5))) begin
-				//8xyE: Vx >> 1
+			end else if((instruction[15:12] == 4'h8) & (instruction[3:0] <= (4'hE))) begin
+				//8xyE: Vx << 1
 				reg_addr1 = instruction[11:8];
 				reg_addr2 = 4'hF;
 				reg_WE2 = 1'b1;
@@ -166,23 +201,27 @@ module Chip8_CPU(	input logic cpu_clk,
 				alu_cmd = 4'h6;
 				reg_writedata1 = alu_out[7:0];	
 				reg_WE1 = 1;
-			end else if((instruction[15:12] == 4'hA)) begin
+			end else if((instruction[15:12] == 4'h9) & (~|instruction[3:0])) begin
+				//9xy0 if(Vx == Vy) skip next instr (AKA PC += 2)
 				reg_addr1 = instruction[11:8]; //Vx
 				reg_addr2 = instruction[ 7:4]; //Vy
-				alu_in1 = reg_readdata1;
-				alu_in2 = reg_readdata2;
-				alu_cmd = 4'h8;
-				//@TODO: prog counter is incread by 2
+				alu_in1 = PC_readdata;
+				alu_in2 = 16'd2;
+				alu_cmd = 4'h4;
+				PC_writedata = alu_out[11:0];
+				PC_WE = 1;
 			end else if((instruction[15:12] == 4'hA)) begin //Annn
 				//Annn: I = nnn
 				reg_I_writedata = {4'b0,instruction[11:0]};
 				reg_I_WE = 1;
 			end else if((instruction[15:12] == 4'hB)) begin //Bnnn
-				alu_in1 = instruction[11:0]; //?
+				//Bnnn: PC = nnn + V0
 				reg_addr1 = 4'h0;
+				alu_in1 = instruction[11:0];
 				alu_in2 = reg_readdata1;
 				alu_cmd = 4'h4;
-				//@TODO: program counter = alu_out;
+				PC_writedata = alu_out[11:0];
+				PC_WE = 1;
 			end else if((instruction[15:12] == 4'hC)) begin //Cxkk
 				//Vx = random AND kk
 				reg_addr1 = instruction[11:8];
