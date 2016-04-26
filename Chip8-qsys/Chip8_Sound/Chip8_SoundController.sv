@@ -1,15 +1,22 @@
-
-// Original audio codec code taken from
-//Howard Mao's FPGA blog
-//http://zhehaomao.com/blog/fpga/2014/01/15/sockit-8.html
-//MOdified as needed
-
-/* Audio_top.sv
-Contains the top-level audio controller. */
+/******************************************************************************
+ * Chip8_SoundController.sv
+ *
+ * Top level controller for audio output on the Chip8
+ * Designed to interact directly with a Altera SoCKit Cyclone V board
+ * Source originally borrowed from: 
+ *  Howard Mao's FPGA blog
+ *  http://zhehaomao.com/blog/fpga/2014/01/15/sockit-8.html
+ *
+ * AUTHORS: David Watkins, Gabrielle Taylor
+ * Dependencies:
+ *  - Chip8_Sound/clock_pll.v
+ *  - Chip8_Sound/audio_effects.sv
+ *  - Chip8_Sound/i2c_av_config.sv
+ *  - Chip8_Sound/audio_codec.sv
+ *****************************************************************************/
 
 module Chip8_SoundController (
     input  OSC_50_B8A,   //reference clock
-    input  [1:0] audio_ctrl,    
 	inout  AUD_ADCLRCK, //Channel clock for ADC
     input  AUD_ADCDAT,
     inout  AUD_DACLRCK, //Channel clock for DAC
@@ -20,14 +27,12 @@ module Chip8_SoundController (
     inout  AUD_I2C_SDAT, //I2C data
     output AUD_MUTE,   //Audio mute
 
-    input is_on, //Turn on the output
-    input reset
+    input logic clk,
+    input logic is_on, //Turn on the output
+    input logic reset
 );
 
-wire main_clk;
 wire audio_clk;
-
-wire [3:0] led;
 
 wire [1:0] sample_end;
 wire [1:0] sample_req;
@@ -39,19 +44,19 @@ clock_pll pll (
     .refclk (OSC_50_B8A),
     .rst (reset),
     .outclk_0 (audio_clk),
-    .outclk_1 (main_clk)
+    .outclk_1 (clk)
 );
 
 //Configure registers of audio codec ssm2603
 i2c_av_config av_config (
-    .clk (main_clk),
+    .clk (clk),
     .reset (reset),
     .i2c_sclk (AUD_I2C_SCLK),
     .i2c_sdat (AUD_I2C_SDAT),
 );
 
 assign AUD_XCK = audio_clk;
-assign AUD_MUTE = (SW != 4'b0);
+assign AUD_MUTE = (is_on == 1'b0);
 
 //Call Audio codec interface
 audio_codec ac (
@@ -75,7 +80,7 @@ audio_effects ae (
     .sample_end (sample_end[1]),
     .sample_req (sample_req[1]),
     .audio_output (audio_output),
-    .control (SW)
+    .control (is_on)
 );
 
 endmodule

@@ -3,7 +3,7 @@
 *
 *********************/
 
-module delay_timer(
+module timer(
 		input logic clk_60,
 		input logic we,
 		input logic cpu_clk,

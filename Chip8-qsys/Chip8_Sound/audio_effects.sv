@@ -13,7 +13,7 @@ module audio_effects (
     input  sample_end, //sample ends
     input  sample_req, //request new sample
     output [15:0] audio_output, //sends audio sample to audio codec
-    input  control    //Control from avalon bus
+    input  control    //Control from the top level Chip8 Module
 );
 
 
