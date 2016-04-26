@@ -1,315 +1,761 @@
+/******************************************************************************
+ * CHIP8_CPU.sv
+ *
+ * Contains the code for interpreting and running instructions as per the Chip8
+ * ISA defined at: http://devernay.free.fr/hacks/chip8/C8TECH10.HTM
+ * 
+ * The main idea behind the instructions is that initially the CPU will request
+ * data from registers and memory at stage 0, and then operate on the data 
+ * returned by the request at stage i, where i > 0. This way the CPU can handle
+ * instructions that operate over multiple cycles and return values that are
+ * a function of the number of cycles that have occured. 
+ *
+ * AUTHORS: David Watkins, Levi Oliver
+ * Dependencies:
+ * 	- Chip8_CPU/Chip8_ALU.sv
+ *	- Chip8_CPU/Chip8_rand_num_generator.sv
+ *	- Chip8_CPU/bcd.sv
+ * 	- enums.svh
+ * 	- utils.svh
+ *****************************************************************************/
 
+`include "../enums.svh"
+`include "../utils.svh"
 
-module Chip8_CPU(	input logic cpu_clk,
-						input logic[15:0] instruction,
-						input logic[7:0] reg_readdata1, reg_readdata2, mem_readdata1, mem_readdata2,
-						input logic[15:0] reg_I_readdata,
-						input logic[7:0] delay_timer_readdata,
-						
-						input logic[11:0] PC_readdata,
-						input logic[3:0] CONTROL,
-						
-						input logic[3:0] testIn1, testIn2,
-						
-						output logic delay_timer_WE, sound_timer_WE,
-						output logic[7:0] delay_timer_writedata, sound_timer_writedata,
-						
-						output logic PC_WE, skip_next_instr,
-						output logic[11:0] PC_writedata,
-						
-						output logic reg_WE1, reg_WE2,
-						output logic[3:0] reg_addr1, reg_addr2,
-						output logic[7:0] reg_writedata1, reg_writedata2,
-						
-						output logic mem_WE1, mem_WE2,
-						output logic[11:0] mem_addr1, mem_addr2,
-						output logic[ 7:0] mem_writedata1, mem_writedata2,
-						
-						output logic reg_I_WE,
-						output logic[15:0] reg_I_writedata,
-						output logic[7:0] testOut1, testOut2);
+module Chip8_CPU(	
+	input logic cpu_clk,
+	input logic[15:0] instruction,
+	input logic[7:0] reg_readdata1, reg_readdata2, 
+					 mem_readdata1, mem_readdata2,
+	input logic[15:0] reg_I_readdata,
+	input logic[7:0] delay_timer_readdata,
 
-		logic[15:0] alu_in1, alu_in2, alu_out;
-		logic[3:0] alu_cmd;
-		logic alu_carry;
-//		logic[7:0] reg_writedata1, reg_writedata2;
-//		logic reg_WE1, reg_WE2;
-//		logic[3:0] reg_addr1, reg_addr2;
-//		logic[7:0] reg_readdata1, reg_readdata2;
-		
-		wire[15:0] rand_num; 
-		Chip8_rand_num_generator rand_num_generator(cpu_clk, rand_num);
-		logic[7:0] to_bcd;
-		wire[3:0] bcd_hundreds, bcd_tens, bcd_ones;
-		bcd binary_to_dec(to_bcd, bcd_hundreds, bcd_tens, bcd_ones);
-		Chip8_ALU alu(alu_in1, alu_in2, alu_cmd, alu_out, alu_carry);
+	input logic key_pressed,
+	input logic[3:0] key_press,
 	
-//		reg_file register_file(reg_addr1, reg_addr2, cpu_clk, 
-//				reg_writedata1, reg_writedata2, reg_WE1, reg_WE2, 
-//				reg_readdata1, reg_readdata2);
+	input logic[11:0] PC_readdata,
 
-		always_comb begin
-			/*DEFAULT WIRE VALUES BEGIN*/
-			alu_in1 = 16'b0;
-			alu_in2 = 16'b0;
-			alu_cmd = 4'b0;
-			reg_writedata1 = 8'b0;
-			reg_writedata2 = 8'b0;
-			reg_WE1 = 1'b0;
-			reg_WE2 = 1'b0;
-			reg_addr1 = testIn1;
-			reg_addr2 = testIn2;
-			reg_I_WE = 1'b0;
-			reg_I_writedata = 16'b0;
-			delay_timer_WE = 1'b0;
-			sound_timer_WE = 1'b0;
-			delay_timer_writedata = 8'b0;
-			sound_timer_writedata = 8'b0;
-			mem_WE1 = 0;
-			mem_WE2 = 0;
-			mem_addr1 = 12'b0;
-			mem_addr2 = 12'b0;
-			mem_writedata1 = 8'b0;
-			mem_writedata2 = 8'b0;
-			to_bcd = 8'b0;
-			PC_WE = 0;
-			PC_writedata = 12'b0;
-			skip_next_instr = 0;
-			testOut1 = reg_readdata1;
-			testOut2 = reg_readdata2;
-			/*END DEFAULT VALUES*/
-			
-			
-			/*BEGIN INSTRUCTION DECODE*/
-			//0nnn ignored; no longer in use
-			if((instruction) == (16'he)) begin //00E0
-				//clear display
-			end else if((instruction) == (16'h00ee)) begin //00EE
-				//@TODO: pop stack & set prog counter to that address
-			end else if((instruction[15:12]) == (4'h1)) begin //1nnn
-				//set program counter to nnn
-				PC_writedata = instruction[11:0];
-				PC_WE = 1;
-			end else if((instruction[15:12]) == (4'h2)) begin //2nnn
-				//@TODO: push current prog counter to stack, set prog counter to nnn
-			end else if((instruction[15:12]) == (4'h3)) begin //3xkk
-				//if reg Vx = kk, prog counter += 2
-				reg_addr1 = instruction[11:8];
-				if(reg_readdata1 == instruction[7:0]) begin
-					alu_in1 = PC_readdata;
-					alu_in2 = 16'd2;
-					alu_cmd = 4'h4;
-					PC_writedata = alu_out[11:0];
-					PC_WE = 1;
-				end
-			end else if((instruction[15:12]) == (4'h4)) begin //4xkk
-				//if reg Vx != kk, prog counter += 2
-				reg_addr1 = instruction[11:8];
-				if(reg_readdata1 != instruction[7:0]) begin
-					alu_in1 = PC_readdata;
-					alu_in2 = 16'd2;
-					alu_cmd = 4'h4;
-					PC_writedata = alu_out[11:0];
-					PC_WE = 1;
-				end
-			end else if(((instruction[15:12]) == (4'h5)) & (~|instruction[3:0])) begin //5xy0
-				//if vx = vy, prog counter += 4
-				reg_addr1 = instruction[11:8];
-				reg_addr2 = instruction[ 7:4];
-				if(reg_readdata1 == reg_readdata2) begin
-					alu_in1 = PC_readdata;
-					alu_in2 = 16'd4;
-					alu_cmd = 4'h4;
-					PC_writedata = alu_out[11:0];
-					PC_WE = 1;
-				end
-			end else if((instruction[15:12]) == (4'h6)) begin
-			//6ykk : Vy = kk
-				reg_addr1 = instruction[11:8];
-				reg_writedata1 = instruction[7:0];
-				reg_WE1 = 1'b1;
-				testOut1 = instruction[7:0];
-				testOut2 = 8'b0;
-			end else if((instruction[15:12]) == (4'h7)) begin //7xkk
-				//7xkk: Vx = Vx + kk
-				reg_addr1 = instruction[11:8];
-				alu_in1 = instruction[7:0];
-				alu_in2 = reg_readdata1;
-				alu_cmd = 4'h4;
-				reg_writedata1 = alu_out[7:0];
-				reg_WE1 = 1'b1;
-			end else if((instruction[15:12] == 4'h8) & (~|instruction[3:0])) begin
-				//8xy0 : Vx = Vy
-				reg_addr1 = instruction[11:8]; //Vx
-				reg_addr2 = instruction[ 7:4]; //Vy
-				reg_writedata1 = reg_readdata2;
-				reg_WE1 = 1'b1; 
-			end else if((instruction[15:12] == 4'h8) & (instruction[3:0] <= (4'h5))) begin
-			//8xy1 : Vx = Vx | Vy, 
-			//8xy2 : Vx = Vx & Vy, 
-			//8xy3 : Vx = Vx XOR Vy, 
-			//8xy4 : Vx = Vx ADD Vy, 
-			//8xy5 : Vx = Vx SUB Vy
-				reg_addr1 = instruction[11:8]; //Vx
-				reg_addr2 = instruction[ 7:4]; //Vy
-				alu_in1 = reg_readdata1;
-				alu_in2 = reg_readdata2;
-				alu_cmd = instruction[3:0];
-				reg_writedata1 = alu_out[7:0];
-				//@TODO: VF write??
-				reg_WE1 = 1'b1; 
-				testOut1 = alu_out[7:0];
-				testOut2 = reg_readdata2;
-			end else if((instruction[15:12] == 4'h8) & (instruction[3:0] == (4'h6))) begin
-			 	//8xy6: Vx >> 1
-				reg_addr1 = instruction[11:8];
-				reg_addr2 = 4'hF;
-				reg_WE2 = 1'b1;
-				if(reg_readdata1[0] == 1'b0) begin
-					reg_writedata2 = 8'b0;
+	input logic[7:0] stage,
+
+	input logic [7:0] fb_readdata,
+
+	output logic delay_timer_WE, sound_timer_WE,
+	output logic[7:0] delay_timer_writedata, sound_timer_writedata,
+	
+	output PC_SRC pc_src,
+	output logic[11:0] PC_writedata,
+	
+	output logic reg_WE1, reg_WE2,
+	output logic[3:0] reg_addr1, reg_addr2,
+	output logic[7:0] reg_writedata1, reg_writedata2,
+	
+	output logic mem_WE1, mem_WE2,
+	output logic[11:0] mem_addr1, mem_addr2,
+	output logic[ 7:0] mem_writedata1, mem_writedata2,
+	
+	output logic reg_I_WE,
+	output logic[15:0] reg_I_writedata,
+
+	output logic sp_push, sp_pop,
+
+	output logic fbreset,
+	output logic [5:0] fbvx_read_addr, fbvy_read_addr,
+	output logic [5:0] fbvx_write_addr, fbvy_write_addr,
+	output logic fb_WE,
+	output logic [7:0] fb_writedata,
+
+	output logic halt_for_keypress
+);
+
+	logic[15:0] alu_in1, alu_in2, alu_out;
+	ALU_f alu_cmd;
+	logic alu_carry;
+	
+	wire[15:0] rand_num; 
+	logic[7:0] to_bcd;
+	wire[3:0] bcd_hundreds, bcd_tens, bcd_ones;
+
+	Chip8_rand_num_generator rand_num_generator(cpu_clk, rand_num);
+	bcd binary_to_dec(to_bcd, bcd_hundreds, bcd_tens, bcd_ones);
+	Chip8_ALU alu(alu_in1, alu_in2, alu_cmd, alu_out, alu_carry);
+
+	always_comb begin
+		/*DEFAULT WIRE VALUES BEGIN*/
+		delay_timer_WE 			= 1'b0;
+		sound_timer_WE 			= 1'b0;
+		delay_timer_writedata	= 8'b0;
+		sound_timer_writedata	= 8'b0;
+		pc_src 					= PC_SRC_NEXT;
+		PC_writedata 			= 16'b0;
+		reg_WE1 				= 1'b0;
+		reg_WE2 				= 1'b0;
+		reg_addr1 				= 4'b0;
+		reg_addr2 				= 4'b0;
+		reg_writedata1 			= 8'b0;
+		reg_writedata2			= 8'b0;
+		mem_WE1 				= 1'b0;
+		mem_WE2 				= 1'b0;
+		mem_addr1 				= 16'h0;
+		mem_addr2 				= 16'h0;
+		mem_writedata1			= 8'h0;
+		mem_writedata2			= 8'h0;
+		reg_I_WE 				= 1'b0;
+		reg_I_writedata			= 16'h0;
+		sp_push 				= 1'b0;
+		sp_pop 					= 1'b0;
+		fbvx_read_addr			= 6'h0;
+		fbvy_read_addr 			= 6'h0;
+		fbvx_write_addr 		= 6'h0;
+		fbvy_write_addr 		= 6'h0; 		
+		fb_WE 					= 1'b0;
+		fb_writedata 			= 8'h0;
+		fbreset 				= 1'b0;
+		halt_for_keypress 		= 1'b0;
+		alu_in1 				= 16'h0;
+		alu_in2 				= 16'h0;
+		alu_cmd 				= ALU_f_NOP;
+		to_bcd 					= 8'h0;
+		/*END DEFAULT VALUES*/
+		
+		
+		/*BEGIN INSTRUCTION DECODE*/
+		case (instruction)
+			// 16'h???: begin
+			//This instruction is only used on the old computers on which Chip-8
+			//was originally implemented. It is ignored by modern interpreters.
+			// end
+
+			16'h00E0: begin //00E0 - CLS
+				//Clear the screen
+				if(stage == 8'h0) begin
+					fbreset = 1'b1;
 				end else begin
-					reg_writedata2 = 8'b1;
+					//CPU DONE
 				end
-				alu_in1 = reg_readdata1;
-				alu_in2 = 16'd1;
-				alu_cmd = 4'h7;
-				reg_writedata1 = alu_out[7:0];	
-				reg_WE1 = 1;
-			end else if((instruction[15:12] == 4'h8) & (instruction[3:0] <= (4'h7))) begin
-				//8xy7 : Vx = Vy SUB Vx (similar to 8xy5 but subtraction is backwards)
-				reg_addr1 = instruction[11:8]; //Vx
-				reg_addr2 = instruction[ 7:4]; //Vy
-				alu_cmd = 4'h5;
-				alu_in1 = reg_readdata2;
-				alu_in2 = reg_readdata1;
-				reg_writedata1 = alu_out[7:0];
-				reg_WE1 = 1;
-				
-				//@TODO: VF need be set here?
-			end else if((instruction[15:12] == 4'h8) & (instruction[3:0] <= (4'hE))) begin
-				//8xyE: Vx << 1
-				reg_addr1 = instruction[11:8];
-				reg_addr2 = 4'hF;
-				reg_WE2 = 1'b1;
-				if(reg_readdata1[7] == 1'b0) begin
-					reg_writedata2 = 8'b0;
-				end else begin
-					reg_writedata2 = 8'b1;
-				end
-				alu_in1 = reg_readdata1;
-				alu_in2 = 16'd1;
-				alu_cmd = 4'h6;
-				reg_writedata1 = alu_out[7:0];	
-				reg_WE1 = 1;
-			end else if((instruction[15:12] == 4'h9) & (~|instruction[3:0])) begin
-				//9xy0 if(Vx == Vy) skip next instr (AKA PC += 2)
-				reg_addr1 = instruction[11:8]; //Vx
-				reg_addr2 = instruction[ 7:4]; //Vy
-				alu_in1 = PC_readdata;
-				alu_in2 = 16'd2;
-				alu_cmd = 4'h4;
-				PC_writedata = alu_out[11:0];
-				PC_WE = 1;
-			end else if((instruction[15:12] == 4'hA)) begin //Annn
-				//Annn: I = nnn
-				reg_I_writedata = {4'b0,instruction[11:0]};
-				reg_I_WE = 1;
-			end else if((instruction[15:12] == 4'hB)) begin //Bnnn
-				//Bnnn: PC = nnn + V0
-				reg_addr1 = 4'h0;
-				alu_in1 = instruction[11:0];
-				alu_in2 = reg_readdata1;
-				alu_cmd = 4'h4;
-				PC_writedata = alu_out[11:0];
-				PC_WE = 1;
-			end else if((instruction[15:12] == 4'hC)) begin //Cxkk
-				//Vx = random AND kk
-				reg_addr1 = instruction[11:8];
-				alu_cmd = 4'h2;
-				alu_in1 = instruction[7:0];
-				alu_in2 = rand_num;
-				reg_writedata1 = alu_out[7:0];
-				reg_I_WE = 1;
-			end else if((instruction[15:12] == 4'hD)) begin //Dxyn
-				//@TODO: sprite stuff
-			end else if((instruction[15:12] == 4'hE) & (instruction[7:0] == 8'h9E)) begin //Ex9E
-				//@TODO: skip next instruction if key with value Vx is pressed
-			end else if((instruction[15:12] == 4'hE) & (instruction[7:0] == 8'hA1)) begin //ExA1
-				//@TODO: skip next instruction if key with value Vx is not pressed
-			end else if((instruction[15:12] == 4'hF) & (instruction[7:0] == 8'h07)) begin //Fx07
-				//set Vx to delay timer value
-				reg_addr1 = instruction[11:8];
-				reg_writedata1 = delay_timer_readdata;
-				reg_WE1 = 1;
-			end else if((instruction[15:12] == 4'hF) & (instruction[7:0] == 8'h0A)) begin //Fx0A
-				//wait for a key press and then store the key value in Vx
-			end else if((instruction[15:12] == 4'hF) & (instruction[7:0] == 8'h15)) begin //Fx15
-				//set delay timer to Vx
-				reg_addr1 = instruction[11:8];
-				delay_timer_writedata = reg_readdata1;
-				delay_timer_WE = 1;
-			end else if((instruction[15:12] == 4'hF) & (instruction[7:0] == 8'h18)) begin //Fx18
-				//set sound timer to Vx
-				reg_addr1 = instruction[11:8];
-				sound_timer_writedata = reg_readdata1;
-				sound_timer_WE = 1;
-			end else if((instruction[15:12] == 4'hF) & (instruction[7:0] == 8'h1E)) begin //Fx1E
-				//I = I + Vx
-				reg_addr1 = instruction[11:8];
-				alu_in1 = reg_readdata1;
-				alu_in2 = reg_I_readdata;
-				alu_cmd = 4'h4;
-				reg_I_writedata = alu_out;
-				reg_I_WE = 1;
-				
-			end else if((instruction[15:12] == 4'hF) & (instruction[7:0] == 8'h29)) begin //Fx29
-				//@TODO: set 1 to location of sprite for digit Vx
-				reg_addr1 = instruction[11:8];
-			end else if((instruction[15:12] == 4'hF) & (instruction[7:0] == 8'h33)) begin //Fx33
-				//store BCD representation of Vx in I, I+1, I+2
-				//NEEDS MULTIPLE CYCLESSSSS!
-				reg_addr1 = instruction[11:8];
-				to_bcd = reg_readdata1;
-				reg_I_writedata = {bcd_hundreds, bcd_tens, bcd_ones, 4'b0};
-				reg_I_WE = 1;
-			end else if((instruction[15:12] == 4'hF) & (instruction[7:0] == 8'h55)) begin //Fx44
-				//store registers V0 through Vx in memory starting at location I
-				//THIS is one of those multicycle instructions
-				//I expect the instruction to hold over multiple cycles while CONTROL increases by 1 every cycle
-				alu_in1 = reg_I_WE;
-				alu_in2 = {12'b0, CONTROL};
-				alu_cmd = 4'h4; //I + CONTROL
-				
-				reg_addr1 = CONTROL;
-				
-				mem_addr1 = alu_out[11:0];
-				mem_writedata1 = reg_readdata1;
-				mem_WE1 = 1;
-				
-			end else if((instruction[15:12] == 4'hF) & (instruction[7:0] == 8'h65)) begin //Fx65
-				//read registers V0 through Vx in memory starting at location I
-				//THIS is one of those multicycle instructions
-				//I expect the instruction to hold over multiple cycles while CONTROL increases by 1 every cycle
-				alu_in1 = reg_I_WE;
-				alu_in2 = {12'b0, CONTROL};
-				alu_cmd = 4'h4; //I + CONTROL
-				
-				reg_addr1 = CONTROL;
-				
-				mem_addr1 = alu_out[11:0];
-				reg_writedata1 = mem_readdata1;
-				reg_WE1 = 1;
-			end else begin
-				reg_addr1 = testIn1;
-				reg_addr2 = testIn2;
-				testOut1 = reg_readdata1;
-				testOut2 = reg_readdata2;
 			end
 
-			/*END INSTRUCTION DECODE*/
+			16'h00EE: begin //00EE - RET
+				//Return from a subroutine.
+				//The interpreter sets the program counter to the address at the
+				//top of the stack, then subtracts 1 from the stack pointer.
+				if(stage == 8'h0) begin
+					sp_pop = 1'b1;
+					pc_src = PC_SRC_STACK;
+				end else begin
+					//CPU DONE
+				end
+			end
+
+			16'h1???: begin //1nnn - JP addr
+				//Jump to location nnn.
+				//The interpreter sets the program counter to nnn.
+				if(stage == 8'h0) begin
+					pc_src = PC_SRC_ALU;
+					PC_writedata = instruction[11:0];
+				end else begin
+					//CPU DONE
+				end
+			end
+
+			16'h2???: begin //2nnn - CALL addr
+				//Call subroutine at nnn.
+				//The interpreter increments the stack pointer, then puts the
+				//current PC on the top of the stack. The PC is then set to nnn.
+
+				if(stage == 8'h0) begin
+					sp_push = 1'b1;
+					pc_src = PC_SRC_ALU;
+					PC_writedata = instruction[11:0];
+				end else begin
+					//CPU DONE
+				end
+			end
+
+			16'h3???: begin //3xkk - SE Vx, byte
+				//Skip next instruction if Vx = kk.
+				//The interpreter compares register Vx to kk, and if they are
+				//equal, increments the program counter by 2.
+				if(stage == 8'h0) begin
+					reg_addr1 = instruction[11:8];
+				end else if(stage == 8'h1 && reg_readdata1 == instruction[7:0]) 
+				begin
+					reg_addr1 = instruction[11:8];
+					pc_src = PC_SRC_SKIP;
+				end else begin
+					//CPU DONE
+				end
+			end
+
+			16'h4???: begin //4xkk - SNE Vx, byte
+				//Skip next instruction if Vx != kk.
+				//The interpreter compares register Vx to kk, and if they are 
+				//not equal, increments the program counter by 2.
+				if(stage == 8'h0) begin
+					reg_addr1 = instruction[11:8];
+				end else if(stage == 8'h1 && reg_readdata1 != instruction[7:0]) 
+				begin
+					reg_addr1 = instruction[11:8];
+					pc_src = PC_SRC_SKIP;
+				end else begin
+					//CPU DONE
+				end
+			end
+
+			16'h5??0: begin //5xy0 - SE Vx, Vy
+				//Skip next instruction if Vx = Vy.
+				//The interpreter compares register Vx to register Vy, and if 
+				//they are equal, increments the program counter by 2.
+				if(stage == 8'h0) begin
+					reg_addr1 = instruction[11:8];
+					reg_addr2 = instruction[ 7:4];
+				end else if(stage == 8'h1 && reg_readdata1 == reg_readdata2) 
+				begin
+					reg_addr1 = instruction[11:8];
+					reg_addr2 = instruction[ 7:4];
+					pc_src = PC_SRC_SKIP;
+				end else begin
+					//CPU DONE
+				end
+			end
+
+			16'h6???: begin //6xkk - LD Vx, byte
+				//Set Vx = kk.
+				//The interpreter puts the value kk into register Vx.
+
+				if(stage == 8'h0) begin
+					reg_addr1 = instruction[11:8];
+					reg_writedata1 = instruction[7:0];
+					reg_WE1 = 1'b1;
+				end else begin
+					//CPU DONE
+				end
+			end
+
+			16'h7???: begin //7xkk - ADD Vx, byte
+				//Set Vx = Vx + kk.
+				//Adds the value kk to the value of register Vx, then stores the
+				//result in Vx. 
+				if(stage == 8'h0) begin
+					reg_addr1 = instruction[11:8];
+				end else if(stage == 8'h1) begin
+					reg_addr1 = instruction[11:8];
+					reg_writedata1 = alu_out;
+					reg_WE1 = 1'b1;
+
+					alu_in1 = reg_readdata1;
+					alu_in2 = instruction[7:0];
+					alu_cmd = ALU_f_ADD;
+				end else begin
+					//CPU DONE
+				end
+			end
+
+			//Arithmetic operators
+			16'h8???: begin //8xyk
+				if(stage == 8'h0) begin
+					reg_addr1 = instruction[11:8];
+					reg_addr2 = instruction[ 7:0];
+				end else if(stage == 8'h1) begin
+					case (instruction[3:0])
+						4'h0: begin //8xy0 - LD Vx, Vy
+							//Set Vx = Vy.
+							//Stores the value of register Vy in register Vx.
+							reg_addr1 = instruction[11:8];
+							reg_writedata1 = reg_readdata2;
+							reg_WE1 = 1'b1;
+						end
+
+						4'h1: begin //8xy1 - OR Vx, Vy
+							//Set Vx = Vx OR Vy.
+							//Performs a bitwise OR on the values of Vx and Vy, 
+							//then stores the result in Vx. A bitwise OR 
+							//compares the corrseponding bits from two values, 
+							//and if either bit is 1, then the same bit in the 
+							//result is also 1. Otherwise, it is 0. 
+
+							alu_cmd = ALU_f_OR;
+							alu_in1 = reg_readdata1;
+							alu_in2 = reg_readdata2;
+
+							reg_addr1 = instruction[11:8];
+							reg_WE1 = 1'b1;
+							reg_writedata1 = alu_out;
+						end
+
+						4'h2: begin //8xy2 - AND Vx, Vy
+							//Set Vx = Vx AND Vy.
+							//Performs a bitwise AND on the values of Vx and Vy, 
+							//then stores the result in Vx. A bitwise AND 
+							//compares the corrseponding bits from two values, 
+							//and if both bits are 1, then the same bit in the 
+							//result is also 1. Otherwise, it is 0. 
+
+							alu_cmd = ALU_f_AND;
+							alu_in1 = reg_readdata1;
+							alu_in2 = reg_readdata2;
+
+							reg_addr1 = instruction[11:8];
+							reg_WE1 = 1'b1;
+							reg_writedata1 = alu_out;
+						end
+
+						4'h3: begin //8xy3 - XOR Vx, Vy
+							//Set Vx = Vx XOR Vy.
+							//Performs a bitwise exclusive OR on the values of 
+							//Vx and Vy, then stores the result in Vx. An 
+							//exclusive OR compares the corrseponding bits from 
+							//two values, and if the bits are not both the same, 
+							//then the corresponding bit in the result is set to 
+							//1. Otherwise, it is 0. 
+
+							alu_cmd = ALU_f_XOR;
+							alu_in1 = reg_readdata1;
+							alu_in2 = reg_readdata2;
+
+							reg_addr1 = instruction[11:8];
+							reg_WE1 = 1'b1;
+							reg_writedata1 = alu_out;
+						end
+
+						4'h4: begin //8xy4 - ADD Vx, Vy
+							//Set Vx = Vx + Vy, set VF = carry.
+							//The values of Vx and Vy are added together. If the 
+							//result is greater than 8 bits (i.e., > 255,) VF is 
+							//set to 1, otherwise 0. Only the lowest 8 bits of 
+							//the result are kept, and stored in Vx.
+
+							alu_cmd = ALU_f_ADD;
+							alu_in1 = reg_readdata1;
+							alu_in2 = reg_readdata2;
+
+							reg_addr1 = instruction[11:8];
+							reg_WE1 = 1'b1;
+							reg_writedata1 = alu_out;
+
+							reg_addr2 = 4'h15;
+							reg_WE2 = 1'b1;
+							reg_writedata2 = alu_carry;
+						end
+						
+						4'h5: begin //8xy5 - SUB Vx, Vy
+							//Set Vx = Vx - Vy, set VF = NOT borrow.
+							//If Vx > Vy, then VF is set to 1, otherwise 0. Then 
+							//Vy is subtracted from Vx, and the results stored 
+							//in Vx.
+
+							alu_cmd = ALU_f_MINUS;
+							alu_in1 = reg_readdata1;
+							alu_in2 = reg_readdata2;
+
+							reg_addr1 = instruction[11:8];
+							reg_WE1 = 1'b1;
+							reg_writedata1 = alu_out;
+
+							reg_addr2 = 4'h15;
+							reg_WE2 = 1'b1;
+							reg_writedata2 = alu_carry;
+						end
+						
+						4'h6: begin //8xy6 - SHR Vx {, Vy}
+							//Set Vx = Vx SHR 1.
+							//If the least-significant bit of Vx is 1, then VF 
+							//is set to 1, otherwise 0. Then Vx is divided by 2.
+
+							reg_addr2 = instruction[11:8];
+							reg_WE2 = 1'b1;
+							reg_writedata2 = {7'h0, reg_readdata1[0]};
+
+							alu_cmd = ALU_f_RSHIFT;
+							alu_in1 = reg_readdata1;
+							alu_in2 = 1;
+
+							reg_addr1 = 4'h15;
+							reg_WE1 = 1'b1;
+							reg_writedata1 = alu_out;
+						end
+						
+						4'h7: begin //8xy7 - SUBN Vx, Vy
+							//Set Vx = Vy - Vx, set VF = NOT borrow.
+							//If Vy > Vx, then VF is set to 1, otherwise 0. Then 
+							//Vx is subtracted from Vy, and the results stored 
+							//in Vx.
+
+							reg_addr1 = instruction[11:8];
+
+							alu_cmd = ALU_f_MINUS;
+							alu_in1 = reg_readdata2;
+							alu_in2 = reg_readdata1;
+
+							reg_addr1 = instruction[11:8];
+							reg_WE1 = 1'b1;
+							reg_writedata1 = alu_out;
+
+							reg_addr2 = 4'h15;
+							reg_WE2 = 1'b1;
+							reg_writedata2 = alu_carry;
+						end
+						
+						4'hE: begin //8xyE - SHL Vx {, Vy}
+							//Set Vx = Vx SHL 1.
+							//If the most-significant bit of Vx is 1, then VF is 
+							//set to 1, otherwise to 0. Then Vx is multiplied 
+							//by 2.
+
+							reg_addr2 = 4'h15;
+							reg_WE2 = 1'b1;
+							reg_writedata2 = {7'h0, reg_readdata1[7]};
+
+							alu_cmd = ALU_f_LSHIFT;
+							alu_in1 = reg_readdata1;
+							alu_in2 = 1;
+
+							reg_addr1 = instruction[11:8];
+							reg_WE1 = 1'b1;
+							reg_writedata1 = alu_out;
+						end
+						
+						default : /* default */;
+					endcase
+				end else begin
+					//CPU DONE
+				end
+			end
+
+			16'h9??0: begin //9xy0 - SNE Vx, Vy
+				//Skip next instruction if Vx != Vy.
+				//The values of Vx and Vy are compared, and if they are not 
+				//equal, the program counter is increased by 2.
+
+				if(stage == 8'h0) begin
+					reg_addr1 = instruction[11:8];
+					reg_addr2 = instruction[ 7:4];
+				end else if(reg_readdata1 != reg_readdata2) begin
+					reg_addr1 = instruction[11:8];
+					reg_addr2 = instruction[ 7:4];
+					pc_src = PC_SRC_SKIP;
+				end else begin
+					//CPU DONE
+				end
+			end
+
+			16'hA???: begin //Annn - LD I, addr
+				//Set I = nnn.
+				//The value of register I is set to nnn.
+				if(stage == 8'h0) begin
+					reg_I_WE = 1'b1;
+					reg_I_writedata = {4'h0, instruction[11:0]};
+				end else begin
+					//CPU DONE
+				end
 				
-		end
-	
-	
+			end
+
+			16'hB???: begin //Bnnn - JP V0, addr
+				//Jump to location nnn + V0.
+				//The program counter is set to nnn plus the value of V0.
+
+				if(stage == 8'h0) begin
+					reg_addr1 = 4'h0;
+				end else if(stage == 8'h1) begin
+					alu_cmd = ALU_f_ADD;
+					alu_in1 = reg_readdata1;
+					alu_in2 = instruction[11:0];
+
+					pc_src = PC_SRC_ALU;
+					PC_writedata = alu_out;
+				end else begin
+					//CPU DONE
+				end
+			end
+
+			16'hC???: begin //Cxkk - RND Vx, byte
+				//Set Vx = random byte AND kk.
+				//The interpreter generates a random number from 0 to 255, which 
+				//is then ANDed with the value kk. The results are stored in Vx. 
+				//See instruction 8xy2 for more information on AND.
+
+				if(stage == 8'h0) begin
+					alu_cmd = ALU_f_AND;
+					alu_in1 = rand_num;
+					alu_in2 = instruction[7:0];
+
+					reg_addr1 = instruction[11:8];
+					reg_WE1 = 1'b1;
+					reg_writedata1 = alu_out;
+				end else begin
+					//CPU DONE
+				end
+				
+			end
+
+			16'hD???: begin //Dxyn - DRW Vx, Vy, nibble
+				//Display n-byte sprite starting at memory location I at 
+				//(Vx, Vy), set VF = collision.
+
+				//The interpreter reads n bytes from memory, starting at the 
+				//address stored in I. These bytes are then displayed as sprites 
+				//on screen at coordinates (Vx, Vy). Sprites are XORed onto the 
+				//existing screen. If this causes any pixels to be erased, VF is 
+				//set to 1, otherwise it is set to 0. If the sprite is 
+				//positioned so part of it is outside the coordinates of the 
+				//display, it wraps around to the opposite side of the screen. 
+				//See instruction 8xy3 for more information on XOR, and section 
+				//2.4, Display, for more information on the Chip-8 screen and 
+				//sprites.
+
+				if(stage == 8'h0) begin
+					reg_addr1 = instruction[11:8];
+					reg_addr2 = instruction[ 7:4];
+				end else if(stage == 8'h1) begin
+					reg_addr1 = instruction[11:8];
+					reg_addr2 = instruction[ 7:4];
+					mem_addr1 = reg_I_readdata;
+
+					fbvx_read_addr = reg_readdata1;
+					fbvy_read_addr = reg_readdata2;
+				end else if(stage <= instruction[3:0]) begin
+					mem_addr1 = reg_I_readdata + stage - 1;
+					reg_addr1 = instruction[11:8];
+					reg_addr2 = instruction[ 7:4];
+
+					fbvx_read_addr = reg_readdata1;
+					fbvy_read_addr = reg_readdata2 + stage - 1;
+
+					alu_cmd = ALU_f_XOR;
+					alu_in1 = mem_readdata1;
+					alu_in2 = fb_readdata;
+
+					fbvx_write_addr = reg_readdata1;
+					fbvy_write_addr = reg_readdata2 + stage - 2;
+					fb_WE = 1'b1;
+					fb_writedata = alu_out;
+
+					//TODO correctly identify why pixels have been turned off
+					//TODO save fbxy and fbvy values using some flag
+				end else begin
+					//CPU DONE
+				end
+			end
+
+			16'hE?9E: begin //Ex9E - SKP Vx
+				//Skip next instruction if key with the value of Vx is pressed.
+				//Checks the keyboard, and if the key corresponding to the value 
+				//of Vx is currently in the down position, PC is increased by 2.
+
+				if(stage == 8'h0) begin
+					reg_addr1 = instruction[11:8];
+				end else if(key_pressed && key_press == reg_readdata1) begin
+					pc_src = PC_SRC_SKIP;
+					//CPU DONE
+				end else begin
+					//CPU DONE
+				end
+			end
+
+			16'hE?A1: begin //ExA1 - SKNP Vx
+				//Skip next instruction if key with the value of Vx is not 
+				//pressed.
+				//Checks the keyboard, and if the key corresponding to the value 
+				//of Vx is currently in the up position, PC is increased by 2.
+
+				if(stage == 8'h0) begin
+					reg_addr1 = instruction[11:8];
+				end else if(key_pressed && key_press != reg_readdata1) begin
+					pc_src = PC_SRC_SKIP;
+				end else begin
+					//CPU DONE
+				end
+			end
+
+
+			//F Instructions
+			16'hF?07: begin //Fx07 - LD Vx, DT
+				//Set Vx = delay timer value.
+				//The value of DT is placed into Vx.
+
+				if(stage == 8'h0) begin
+					reg_addr1 = instruction[11:8];
+					reg_writedata1 = delay_timer_readdata;
+					reg_WE1 = 1'b1;
+				end else begin
+					//CPU DONE
+				end
+			end
+
+			16'hF?0A: begin //Fx0A - LD Vx, K
+				//Wait for a key press, store the value of the key in Vx.
+				//All execution stops until a key is pressed, then the value of 
+				//that key is stored in Vx.
+
+				if(stage == 8'h0) begin
+					halt_for_keypress = 1'b1;
+				end else if(key_pressed) begin
+					halt_for_keypress = 1'b0;
+					reg_addr1 = instruction[11:8];
+					reg_writedata1 = key_press;
+					reg_WE1 = 1'b1;
+				end else begin
+					//CPU DONE
+				end
+			end
+
+			16'hF?15: begin //Fx15 - LD DT, Vx
+				//Set delay timer = Vx.
+				//DT is set equal to the value of Vx.
+
+				if(stage == 8'h0) begin
+					reg_addr1 = instruction[11:8];
+				end else if(stage == 8'h1) begin
+					delay_timer_writedata = reg_readdata1;
+					delay_timer_WE = 1'b1;
+				end else begin
+					//CPU DONE
+				end
+			end
+
+			16'hF?18: begin //Fx18 - LD ST, Vx
+				//Set sound timer = Vx.
+				//ST is set equal to the value of Vx.
+
+				if(stage == 8'h0) begin
+					reg_addr1 = instruction[11:8];
+				end else if(stage == 8'h1) begin
+					sound_timer_writedata = reg_readdata1;
+					sound_timer_WE = 1'b1;
+				end else begin
+					//CPU DONE
+				end
+			end
+
+			16'hF?1E: begin //Fx1E - ADD I, Vx
+				//Set I = I + Vx.
+				//The values of I and Vx are added, and the results are stored 
+				//in I.
+
+				if(stage == 8'h0) begin
+					reg_addr1 = instruction[11:8];
+				end else if(stage == 8'h1) begin
+					alu_cmd = ALU_f_ADD;
+					alu_in1 = reg_I_readdata;
+					alu_in2 = reg_readdata1;
+
+					reg_I_writedata = alu_out;
+					reg_I_WE = 1'b1;
+				end else begin
+					//CPU DONE
+				end
+			end
+
+			16'hF?29: begin //Fx29 - LD F, Vx
+				//Set I = location of sprite for digit Vx.
+				//The value of I is set to the location for the hexadecimal 
+				//sprite corresponding to the value of Vx. See section 2.4, 
+				//Display, for more information on the Chip-8 hexadecimal font.
+
+				//The chip8 fontset has each character starting from 0 to 80,
+				//where each character takes 5 bytes each. 
+
+				if(stage == 8'h0) begin
+					reg_addr1 = instruction[11:8];
+				end else if(stage == 8'h1) begin
+					reg_I_writedata = {12'h0, reg_readdata1[11:8]} * 5;
+					reg_I_WE = 1'b1;
+				end else begin
+					//CPU DONE
+				end
+			end
+
+			16'hF?33: begin //Fx33 - LD B, Vx
+				//Store BCD representation of Vx in memory locations I, I+1, and 
+				//I+2.
+				//The interpreter takes the decimal value of Vx, and places the 
+				//hundreds digit in memory at location in I, the tens digit at 
+				//location I+1, and the ones digit at location I+2.
+
+				if(stage == 8'h0) begin
+					reg_addr1 = instruction[11:8];
+				end else if(stage == 8'h1) begin
+					to_bcd = reg_readdata1;
+					reg_addr1 = instruction[11:8];
+
+					mem_addr1 = reg_I_readdata;
+					mem_writedata1 = bcd_hundreds;
+					mem_WE1 = 1'b1;
+				end else if(stage == 8'h2) begin
+					to_bcd = reg_readdata1;
+					reg_addr1 = instruction[11:8];
+
+					alu_cmd = ALU_f_ADD;
+					alu_in1 = reg_I_readdata;
+					alu_in2 = 1;
+
+					mem_addr1 = alu_out;
+					mem_writedata2 = bcd_tens;
+					mem_WE1 = 1'b1;
+				end else if(stage == 8'h3) begin
+					to_bcd = reg_readdata1;
+					// reg_addr1 = instruction[11:8];
+
+					alu_cmd = ALU_f_ADD;
+					alu_in1 = reg_I_readdata;
+					alu_in2 = 2;
+
+					mem_addr1 = alu_out;
+					mem_writedata2 = bcd_ones;
+					mem_WE1 = 1'b1;
+				end else begin
+					//CPU DONE
+				end
+			end
+
+			16'hF?55: begin //Fx55 - LD [I], Vx
+				//Store registers V0 through Vx in memory starting at location I
+				//The interpreter copies the values of registers V0 through Vx 
+				//into memory, starting at the address in I.
+
+				if(stage == 8'h0) begin
+					mem_addr1 = reg_I_readdata;
+				end else if(stage <= instruction[11:8] + 1) begin
+					alu_cmd = ALU_f_ADD;
+					alu_in1 = reg_I_readdata;
+					alu_in2 = stage - 1;
+					mem_addr1 = alu_out;
+
+					reg_addr1 = stage[3:0] - 1;
+					reg_writedata1 = mem_readdata1;
+					reg_WE1 = 1'b1;
+				end else begin
+					//CPU DONE
+				end
+			end
+
+			16'hF?65: begin //Fx65 - LD Vx, [I]
+				//Read registers V0 through Vx from memory starting at location 
+				//I.
+				//The interpreter reads values from memory starting at location 
+				//I into registers V0 through Vx.
+
+				if(stage == 8'h0) begin
+					reg_addr1 = 4'h0;
+				end else if(stage <= instruction[11:8] + 1) begin
+					reg_addr1 = stage[3:0];
+
+					alu_cmd = ALU_f_ADD;
+					alu_in1 = reg_I_readdata;
+					alu_in2 = stage - 1;
+
+					mem_addr1 = alu_out;
+					mem_writedata1 = reg_readdata1;
+					mem_WE1 = 1'b1;
+				end else begin
+					//CPU DONE
+				end
+			end
+		
+			default : /* default */;
+		endcase
+		/*END INSTRUCTION DECODE*/
+			
+	end
 	
 endmodule
