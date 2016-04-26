@@ -49,11 +49,12 @@ module Chip8_Top(
 
 	logic [15:0] 	I;
 	logic [5:0] 	sp;
-	logic [63:0][15:0] 	stack;
+	logic [63:0][11:0] 	stack;
 
 	//Program counter
 	logic [7:0] 	pc_state;
-	logic [15:0] 	pc;
+	logic [11:0] 	pc;
+	logic [11:0]    next_pc;
 	logic [31:0] 	stage;
 
 	//Framebuffer values
@@ -136,10 +137,10 @@ module Chip8_Top(
 
 			state <= Chip8_PAUSED;
 			cpu_instruction <= 16'h0;
+			stage <= 32'h0;
 
 		//Handle input from the ARM processor
 		end else if(chipselect) begin
-			cpu_instruction <= 16'h0; //Halt processor execution
 
 			if(address[16]) begin
 				memaddr1 <= address[11:0];
@@ -235,7 +236,7 @@ module Chip8_Top(
 
 					//Read/write stack
 					17'h18 : begin 
-						data_out <= {16'b0, stack[sp]};
+						data_out <= {20'b0, stack[sp]};
 						if(write) stack[sp] <= 1'b0;
 					end	
 
@@ -246,6 +247,116 @@ module Chip8_Top(
 		end else begin
 			case (state)
 				Chip8_RUNNING: begin
+					if(stage == 32'h0) begin
+						memaddr1 <= pc;
+						memaddr2 <= pc + 1;	
+						cpu_instruction <= 16'h0;
+					end else if (stage == 32'h1) begin
+						cpu_instruction[15:8] <= memreaddata1;
+						cpu_instruction[7:0]  <= memreaddata2;
+					end else if (stage >= 32'h2) begin
+
+						if(cpu_delay_timer_WE) begin
+							delay_timer_write_enable <= 1'b1;
+							delay_timer_data <= cpu_delay_timer_writedata;
+						end else begin
+							delay_timer_write_enable <= 1'b0;
+						end
+
+						if(cpu_sound_timer_WE) begin
+							sound_timer_write_enable <= 1'b1;
+							sound_timer_data <= cpu_sound_timer_writedata;
+						end else begin
+							sound_timer_write_enable <= 1'b0;
+						end
+
+						if(cpu_reg_WE1) begin
+							regWE1 <= 1'b1;
+							reg_writedata1 <= cpu_reg_writedata1;
+						end else begin
+							regWE1 <= 1'b0;
+						end
+
+						if(cpu_reg_WE2) begin
+							regWE2 <= 1'b1;
+							reg_writedata2 <= cpu_reg_writedata2;
+						end else begin
+							regWE2 <= 1'b0;
+						end
+
+						if(cpu_mem_WE1) begin
+							memwritedata1 <= cpu_mem_writedata1;
+							memWE1 <= 1'b1;
+						end else begin
+							memWE1 <= 1'b0;
+						end
+
+						if(cpu_mem_WE2) begin
+							memwritedata2 <= cpu_mem_writedata2;
+							memWE2 <= 1'b1;
+						end else begin
+							memWE2 <= 1'b0;
+						end
+
+						if(cpu_reg_I_WE) begin
+							I <= cpu_reg_I_writedata;
+						end else begin
+							//Nothing
+						end
+
+						if(cpu_sp_push) begin
+							if(sp + 1 < 64)
+								sp <= sp + 1;
+							stack[sp] <= pc;
+						end 
+
+						if(cpu_sp_pop) begin
+							if(sp - 1 >= 0)
+								sp <= sp - 1;
+							// pc <= stack[sp];
+							next_pc <= stack[sp];
+						end else begin
+							case (cpu_pc_src)
+								PC_SRC_ALU	: next_pc <= cpu_PC_writedata;
+								PC_SRC_SKIP	: next_pc <= pc + 4;
+								PC_SRC_NEXT	: next_pc <= pc + 2;
+								default : next_pc <= pc + 2;
+							endcase
+						end
+
+						if(cpu_fbreset) begin
+							fbreset <= 1'b1;
+						end else begin
+							fbreset <= 1'b0;
+						end
+
+						if(cpu_fb_WE) begin
+							fbwrite <= 1'b1;
+							fbdata <= cpu_fb_writedata;
+							fbvx_write <= cpu_fbvx_write_addr;
+							fbvy_write <= cpu_fbvy_write_addr;
+						end else begin
+							fbwrite <= 1'b0;
+						end
+
+						// cpu_halt_for_keypress;
+
+						//Always
+						reg_addr1 <= cpu_reg_addr1;
+						reg_addr2 <= cpu_reg_addr2;
+						fbvx_read <= cpu_fbvx_read_addr;
+						fbvy_read <= cpu_fbvy_read_addr;
+						memaddr1 <= cpu_mem_addr1;
+						memaddr2 <= cpu_mem_addr2;
+					end
+
+					//Cap of 50, since 1000 instructions/sec is reasonable
+					if(stage + 1 > 50) begin
+						stage <= 32'h0;
+						pc <= next_pc;
+					end else begin
+						stage <= stage + 1;
+					end
 				end
 				Chip8_LOADING_ROM: begin
 				end
@@ -315,6 +426,7 @@ module Chip8_Top(
 		.key_press(key),
 		.PC_readdata(pc),
 		.stage(stage),
+		.top_level_state(state),
 		.fb_readdata(fb_readdata),
 		.delay_timer_WE(cpu_delay_timer_WE),
 		.sound_timer_WE(cpu_sound_timer_WE),
