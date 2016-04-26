@@ -1,19 +1,23 @@
-/*
- * Chip8 top level (Current a WIP)
- * Top level controller, has direct link to the linux side
+ /******************************************************************************
+ * Chip8_Top.sv
  *
- * Columbia University
- */
-
-// // enumeration type for the CPU state
-// typedef enum 
-// { CPU_f_RUNNING , CPU_f_PAUSED , CPU_f_LOADING , CPU_f_LOADFONT} CPU_f ;
+ * Top level Chip8 module that controls all other modules
+ *
+ * AUTHORS: David Watkins, Levi Oliver, Ashley Kling, Gabrielle Taylor
+ * Dependencies:
+ *  - Chip8_SoundController.sv
+ *  - Chip8_framebuffer.sv
+ * 	- timer.sv
+ * 	- clk_div.sv
+ *  - memory.v
+ *  - reg_file.v
+ *  - enums.svh
+ *  - utils.svh
+ *  - Chip8_CPU.sv
+ *****************************************************************************/
  
-function reg inbetween(input [17:0] low, value, high); 
-begin
-  inbetween = value >= low && value <= high;
-end
-endfunction
+`include "enums.svh"
+`include "utils.svh"
  
 module Chip8_Top(
 	input logic         clk,
@@ -24,150 +28,365 @@ module Chip8_Top(
 	input logic [17:0] 	address,
 
 	output logic [31:0] data_out,
+
+	//VGA Output
 	output logic [7:0]  VGA_R, VGA_G, VGA_B,
 	output logic        VGA_CLK, VGA_HS, VGA_VS, VGA_BLANK_n,
-	output logic        VGA_SYNC_n);
+	output logic        VGA_SYNC_n,
 
-	logic [15:0] i, sp;
-	logic [511:0] stack;
+	//Audio Output
+	input  OSC_50_B8A,   	//reference clock
+	inout  AUD_ADCLRCK, 	//Channel clock for ADC
+    input  AUD_ADCDAT,
+    inout  AUD_DACLRCK, 	//Channel clock for DAC
+    output AUD_DACDAT,  	//DAC data
+    output AUD_XCK, 
+    inout  AUD_BCLK, 		//Bit clock
+    output AUD_I2C_SCLK, 	//I2C clock
+    inout  AUD_I2C_SDAT, 	//I2C data
+    output AUD_MUTE   		//Audio mute
+);
+
+	logic [15:0] 	I;
+	logic [5:0] 	sp;
+	logic [63:0][15:0] 	stack;
 
 	//Program counter
-	logic [7:0] pc_state;
-	logic [15:0] pc;
+	logic [7:0] 	pc_state;
+	logic [15:0] 	pc;
+	logic [31:0] 	stage;
 
 	//Framebuffer values
-	logic fbreset;
-	logic [7:0] fbvx;
-	logic [7:0] fbvy;
+	logic 		fbreset;
+	logic [7:0] fbvx_read, fbvy_read;
+	logic [7:0] fbvx_write, fbvy_write;
 	logic [7:0] fbdata;
-	logic fbwrite;
-	
-	//State variables
-	logic [1:0] state;
+	logic 		fbwrite;
+	logic [7:0] fb_readdata;
 
 	//Keyboard
-	logic ispressed;
+	logic 		ispressed;
 	logic [3:0] key;
 	
 	//Memory
-	logic [7:0] memwritedata1, memwritedata2;
-	logic memWE1, memWE2;
-	logic [11:0] memaddr1, memaddr2;
-	logic [7:0] memreaddata1, memreaddata2;
+	logic [7:0] 	memwritedata1, memwritedata2;
+	logic 			memWE1, memWE2;
+	logic [11:0] 	memaddr1, memaddr2;
+	logic [7:0] 	memreaddata1, memreaddata2;
+
+	//Reg file
+	logic [7:0] 	reg_writedata1, reg_writedata2;
+	logic 			regWE1, regWE2;
+	logic [3:0] 	reg_addr1, reg_addr2;
+	logic [7:0] 	reg_readdata1, reg_readdata2;
 
 	//CPU
-	logic [15:0] cpu_instruction;
-	logic [3:0] cpu_testIn1, cpu_testIn2;
-	logic [7:0] cpu_testOut1, cpu_testOut2;
+	logic [15:0] 	cpu_instruction;
+	logic 			cpu_delay_timer_WE, cpu_sound_timer_WE;
+	logic [7:0] 	cpu_delay_timer_writedata, cpu_sound_timer_writedata;
+	PC_SRC 			cpu_pc_src;
+	logic [11:0] 	cpu_PC_writedata;
+	logic 			cpu_reg_WE1, cpu_reg_WE2;
+	logic [3:0] 	cpu_reg_addr1, cpu_reg_addr2;
+	logic [7:0] 	cpu_reg_writedata1, cpu_reg_writedata2;
+	logic 			cpu_mem_WE1, cpu_mem_WE2;
+	logic [11:0] 	cpu_mem_addr1, cpu_mem_addr2;
+	logic [ 7:0] 	cpu_mem_writedata1, cpu_mem_writedata2;
+	logic 			cpu_reg_I_WE;
+	logic [15:0] 	cpu_reg_I_writedata;
+	logic 			cpu_sp_push, cpu_sp_pop;
+	logic 			cpu_fbreset;
+	logic [5:0] 	cpu_fbvx_read_addr, cpu_fbvy_read_addr;
+	logic [5:0] 	cpu_fbvx_write_addr, cpu_fbvy_write_addr;
+	logic 			cpu_fb_WE;
+	logic [7:0] 	cpu_fb_writedata;
+	logic 			cpu_halt_for_keypress;
 
-	always_ff @(posedge clk) begin : proc_
+	//Sound
+ 	// logic sound_on;
+	logic 			sound_reset;
+
+	//Timers
+	logic 			clk_div_reset, clk_div_clk_out;
+	logic 			delay_timer_write_enable, delay_timer_out;
+	logic [7:0] 	delay_timer_data, delay_timer_output_data;
+	logic 			sound_timer_write_enable, sound_timer_out;
+	logic [7:0] 	sound_timer_data, sound_timer_output_data;
+
+	//State
+	Chip8_STATE state;
+
+	always_ff @(posedge clk) begin
 		if(reset) begin
 			//Add initial values for code
-			pc <= 15'h200;
+			pc <= 16'h200;
 
 			fbwrite <= 1'b0;
 			memWE1 <= 1'b0;
 			memWE2 <= 1'b0;
-			state <= 2'h0;
+			cpu_instruction <= 16'h0;
+			delay_timer_write_enable <= 1'b0;
+			sound_timer_write_enable <= 1'b0;
+			I <= 16'h0;
+			sp <= 6'h0;
+			fbreset <= 1'b0;
+			fbwrite <= 1'b0;
+			regWE1 <= 1'b0;
+			regWE2 <= 1'b0;
+
+			state <= Chip8_PAUSED;
+			cpu_instruction <= 16'h0;
+
 		//Handle input from the ARM processor
 		end else if(chipselect) begin
+			cpu_instruction <= 16'h0; //Halt processor execution
+
 			if(address[16]) begin
-				//memaddr1 <= address[11:0];
-				//data_out <= memreaddata1;
-				//if(write) begin
-				//	memWE1 <= 1'b1;
-				//	memwritedata1 <= writedata[7:0];
-				//end
+				memaddr1 <= address[11:0];
+				data_out <= memreaddata1;
+				if(write) begin
+					memWE1 <= 1'b1;
+					memwritedata1 <= writedata[7:0];
+				end
 			end else begin
 				case (address) 
 				
-					// inbetween(17'h0, address, 17'hF) : begin end
-					// 17'h11 : data_out <= {32'b0}; //Fix me
-					// 17'h12 : data_out <= {32'b0}; //Fix me
+					//Read/write from register
+					inbetween(17'h0, address, 17'hF) : begin
+						reg_addr1 <= address[3:0];
+						data_out <= {24'h0, reg_readdata1};
+						if(write) begin
+							regWE1 <= 1'b1;
+							reg_writedata1 <= writedata[7:0];
+						end
+					end
 
 					17'h10 : begin
-						i <= writedata[15:0];
-						data_out <= {16'b0, i};
+						I <= writedata[15:0];
+						data_out <= {16'b0, I};
 					end
-					17'h11 : data_out <= {32'b0}; //Fix me
-					17'h12 : data_out <= {32'b0}; //Fix me
+
+					//Read/write to sound_timer
+					17'h11 : begin
+						data_out <= {24'h0, sound_timer_output_data};
+						if(write) begin
+							sound_timer_write_enable <= 1'b1;
+							sound_timer_data <= writedata[7:0];
+						end 
+					end
+
+					//Read/write to delay_timer
+					17'h12 : begin
+						data_out <= {24'h0, delay_timer_output_data};
+						if(write) begin
+							delay_timer_write_enable <= 1'b1;
+							delay_timer_data <= writedata[7:0];
+						end
+					end
 					
+					//Read/write to stack pointer
 					17'h13 : begin
-						data_out <= {16'b0, sp};
+						data_out <= {26'b0, sp};
 						if(write) sp <= writedata[5:0]; //0-63
 					end
 
+					//Read/write to program counter
 					17'h14 : begin 
 						data_out <= {16'b0, pc};
 						if(write) pc <= writedata[11:0]; //0-4095
 					end
 
+					//Read/write key presses
 					17'h15 : begin 
 						data_out <= {32'b0}; //No reading keypress
 						if(write) begin
-							ispressed <= writedata[7:4];
+							ispressed <= writedata[4];
 							key <= writedata[3:0];
 						end
 					end
 
+					//Read/write the state of the emulator
 					17'h16 : begin
 						data_out <= {30'b0, state};
-						if(write) state <= writedata[1:0];
+						if(write) begin
+							case (writedata[1:0])
+								2'h0: state <= Chip8_RUNNING;
+								2'h1: state <= Chip8_LOADING_ROM;
+								2'h2: state <= Chip8_LOADING_FONT;
+								2'h3: state <= Chip8_PAUSED;
+								default : /* default */;
+							endcase
+						end
 					end
 
+					//Modify framebuffer
 					17'h17 : begin
-						data_out <= {32'b0}; //Read Framebuffer?
+						fbvx_read <= writedata[11:8];
+						fbvy_read <= writedata[7:4];
+						data_out <=  {24'h0, fb_readdata};
+
 						if(write) begin 
-							fbvx <= writedata[11:8]; 
-							fbvy <= writedata[7:4];
+							fbvx_write <= writedata[11:8]; 
+							fbvy_write <= writedata[7:4];
 							fbdata <= writedata[3:0];
 							fbwrite <= 1'b1;
 						end
 					end
 
+					//Read/write stack
 					17'h18 : begin 
-						data_out <= {32'b0}; //Fix me {16'b0, stack[sp]}
-						if(write) stack[0] <= 1'b0; //Fix me
+						data_out <= {16'b0, stack[sp]};
+						if(write) stack[sp] <= 1'b0;
 					end	
 
 				endcase
 			end
 
-		//Normal processor continuation if State is running
-		end else if(state == 2'h0) begin
-			pc <= pc + 2;
+		//Handle current processor state and cpu output
+		end else begin
+			case (state)
+				Chip8_RUNNING: begin
+				end
+				Chip8_LOADING_ROM: begin
+				end
+				Chip8_LOADING_FONT: begin
+				end
+				Chip8_PAUSED: begin
+				end
+				default : /* default */;
+			endcase
 		end
 	end
 
-	always_comb begin 
-		memaddr1 = pc[11:0];
-		memaddr2 = pc[11:0] + 1;
+	Chip8_framebuffer framebuffer(
+		.clk(clk),
+		.reset(fbreset),
+		.fbvx_read(fbvx_read),
+		.fbvy_read(fbvy_read),
+		.fbvx_write(fbvx_write),
+		.fbvy_write(fbvy_write),
+		.fbdata(fbdata),
+		.write(fbwrite),
+		.fb_readdata(fb_readdata),
+		.VGA_R(VGA_R),
+		.VGA_G(VGA_G),
+		.VGA_B(VGA_B),
+		.VGA_CLK(VGA_CLK),
+		.VGA_HS(VGA_HS),
+		.VGA_VS(VGA_VS),
+		.VGA_BLANK_n(VGA_BLANK_n),
+		.VGA_SYNC_n(VGA_SYNC_n)
+	);	
 
-		cpu_instruction = (memreaddata1 << 8) | (memreaddata2);
-	end
+	memory memory(
+		.address_a(memaddr1),
+		.address_b(memaddr2),
+		.clock(clk),
+		.data_a(memwritedata1),
+		.data_b(memwritedata2),
+		.wren_a(memWE1),
+		.wren_b(memWE2),
+		.q_a(memreaddata1),
+		.q_b(memreaddata2)
+	);
 
-	Framebuffer framebuffer(.clk(clk), 
-							.reset(fbreset), 
-							.write(fbwrite),
-							.*);	
+	reg_file reg_file(
+		.clock(clk),
+		.address_a(reg_addr1),
+		.address_b(reg_addr2),
+		.data_a(reg_writedata1),
+		.data_b(reg_writedata2),
+		.wren_a(regWE1),
+		.wren_b(regWE2),
+		.q_a(reg_readdata1),
+		.q_b(reg_readdata2)
+	);
 
-	/*Chip8_memory memory(.cpu_clk(clk),
-					.writedata1(memwritedata1),
-					.writedata2(memwritedata2),
-					.WE1(memWE1),
-					.WE2(memWE2),
-					.addr1(memaddr1),
-					.addr2(memaddr2),
-					.readdata1(memreaddata1),
-					.readdata2(memreaddata2));*/
-	memory memory(memaddr1, memaddr2, clk, memwritedata1, memwritedata2,
-					memWE1, memWE2, memreaddata1, memreaddata2);
+	Chip8_CPU cpu(	
+		.cpu_clk(clk),
+		.instruction(cpu_instruction),
+		.reg_readdata1(reg_readdata1), 
+		.reg_readdata2(reg_readdata2), 
+		.mem_readdata1(memreaddata1), 
+		.mem_readdata2(memreaddata2),
+		.reg_I_readdata(I),
+		.delay_timer_readdata(delay_timer_data),
+		.key_pressed(ispressed),
+		.key_press(key),
+		.PC_readdata(pc),
+		.stage(stage),
+		.fb_readdata(fb_readdata),
+		.delay_timer_WE(cpu_delay_timer_WE),
+		.sound_timer_WE(cpu_sound_timer_WE),
+		.delay_timer_writedata(cpu_delay_timer_writedata),
+		.sound_timer_writedata(cpu_sound_timer_writedata),
+		.pc_src(cpu_pc_src),
+		.PC_writedata(cpu_PC_writedata),
+		.reg_WE1(cpu_reg_WE1),
+		.reg_WE2(cpu_reg_WE2),
+		.reg_addr1(cpu_reg_addr1),
+		.reg_addr2(cpu_reg_addr2),
+		.reg_writedata1(cpu_reg_writedata1),
+		.reg_writedata2(cpu_reg_writedata2),
+		.mem_WE1(cpu_mem_WE1),
+		.mem_WE2(cpu_mem_WE2),
+		.mem_addr1(cpu_mem_addr1),
+		.mem_addr2(cpu_mem_addr2),
+		.mem_writedata1(cpu_mem_writedata1),
+		.mem_writedata2(cpu_mem_writedata2),
+		.reg_I_WE(cpu_reg_I_WE),
+		.reg_I_writedata(cpu_reg_I_writedata),
+		.sp_push(cpu_sp_push),
+		.sp_pop(cpu_sp_pop),
+		.fbreset(cpu_fbreset),
+		.fbvx_read_addr(cpu_fbvx_read_addr),
+		.fbvy_read_addr(cpu_fbvy_read_addr),
+		.fbvx_write_addr(cpu_fbvx_write_addr),
+		.fbvy_write_addr(cpu_fbvy_write_addr),
+		.fb_WE(cpu_fb_WE),
+		.fb_writedata(cpu_fb_writedata),
+		.halt_for_keypress(cpu_halt_for_keypress)
+	);
 
-	Chip8_CPU cpu(	.cpu_clk(clk),
-					.instruction(cpu_instruction),
-					.testIn1(cpu_testIn1),
-					.testIn2(cpu_testIn2),
-					.testOut1(cpu_testOut1),
-					.testOut2(cpu_testOut2));
+	Chip8_SoundController sound(
+		.OSC_50_B8A(OSC_50_B8A),
+		.AUD_ADCLRCK(AUD_ADCLRCK),
+		.AUD_ADCDAT(AUD_ADCDAT),
+		.AUD_DACLRCK(AUD_DACLRCK),
+		.AUD_DACDAT(AUD_DACDAT),
+		.AUD_XCK(AUD_XCK),
+		.AUD_BCLK(AUD_BCLK),
+		.AUD_I2C_SCLK(AUD_I2C_SCLK),
+		.AUD_I2C_SDAT(AUD_I2C_SDAT),
+		.AUD_MUTE(AUD_MUTE),
+
+		.clk(clk),
+		.is_on(sound_timer_out),
+		.reset(sound_reset)
+	);
+
+	clk_div clk_div(
+		.clk_in(clk),
+		.reset(clk_div_reset),
+		.clk_out(clk_div_clk_out)
+	);
+
+	timer sound_timer(
+		.clk(clk),        			//50 MHz clock
+		.clk_60(clk_div_clk_out),   //60 Hz clock
+		.write_enable(delay_timer_write_enable),     	//Write enable
+		.data(delay_timer_data),
+		.out(delay_timer_out),
+		.output_data (sound_timer_output_data)
+	);
+
+	timer delay_timer(
+		.clk(clk),        			//50 MHz clock
+		.clk_60(clk_div_clk_out),   //60 Hz clock
+		.write_enable(sound_timer_write_enable),     	//Write enable
+		.data(sound_timer_data),
+		.out(sound_timer_out),
+		.output_data (delay_timer_output_data)
+	);
 
 endmodule

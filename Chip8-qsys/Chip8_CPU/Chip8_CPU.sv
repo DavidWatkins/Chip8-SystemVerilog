@@ -35,7 +35,7 @@ module Chip8_CPU(
 	
 	input logic[11:0] PC_readdata,
 
-	input logic[7:0] stage,
+	input logic[31:0] stage,
 
 	input logic [7:0] fb_readdata,
 
@@ -127,7 +127,7 @@ module Chip8_CPU(
 
 			16'h00E0: begin //00E0 - CLS
 				//Clear the screen
-				if(stage == 8'h0) begin
+				if(stage == 32'h0) begin
 					fbreset = 1'b1;
 				end else begin
 					//CPU DONE
@@ -138,7 +138,7 @@ module Chip8_CPU(
 				//Return from a subroutine.
 				//The interpreter sets the program counter to the address at the
 				//top of the stack, then subtracts 1 from the stack pointer.
-				if(stage == 8'h0) begin
+				if(stage == 32'h0) begin
 					sp_pop = 1'b1;
 					pc_src = PC_SRC_STACK;
 				end else begin
@@ -149,7 +149,7 @@ module Chip8_CPU(
 			16'h1???: begin //1nnn - JP addr
 				//Jump to location nnn.
 				//The interpreter sets the program counter to nnn.
-				if(stage == 8'h0) begin
+				if(stage == 32'h0) begin
 					pc_src = PC_SRC_ALU;
 					PC_writedata = instruction[11:0];
 				end else begin
@@ -162,7 +162,7 @@ module Chip8_CPU(
 				//The interpreter increments the stack pointer, then puts the
 				//current PC on the top of the stack. The PC is then set to nnn.
 
-				if(stage == 8'h0) begin
+				if(stage == 32'h0) begin
 					sp_push = 1'b1;
 					pc_src = PC_SRC_ALU;
 					PC_writedata = instruction[11:0];
@@ -175,9 +175,9 @@ module Chip8_CPU(
 				//Skip next instruction if Vx = kk.
 				//The interpreter compares register Vx to kk, and if they are
 				//equal, increments the program counter by 2.
-				if(stage == 8'h0) begin
+				if(stage == 32'h0) begin
 					reg_addr1 = instruction[11:8];
-				end else if(stage == 8'h1 && reg_readdata1 == instruction[7:0]) 
+				end else if(stage == 32'h1 && reg_readdata1 == instruction[7:0]) 
 				begin
 					reg_addr1 = instruction[11:8];
 					pc_src = PC_SRC_SKIP;
@@ -190,9 +190,9 @@ module Chip8_CPU(
 				//Skip next instruction if Vx != kk.
 				//The interpreter compares register Vx to kk, and if they are 
 				//not equal, increments the program counter by 2.
-				if(stage == 8'h0) begin
+				if(stage == 32'h0) begin
 					reg_addr1 = instruction[11:8];
-				end else if(stage == 8'h1 && reg_readdata1 != instruction[7:0]) 
+				end else if(stage == 32'h1 && reg_readdata1 != instruction[7:0]) 
 				begin
 					reg_addr1 = instruction[11:8];
 					pc_src = PC_SRC_SKIP;
@@ -205,10 +205,10 @@ module Chip8_CPU(
 				//Skip next instruction if Vx = Vy.
 				//The interpreter compares register Vx to register Vy, and if 
 				//they are equal, increments the program counter by 2.
-				if(stage == 8'h0) begin
+				if(stage == 32'h0) begin
 					reg_addr1 = instruction[11:8];
 					reg_addr2 = instruction[ 7:4];
-				end else if(stage == 8'h1 && reg_readdata1 == reg_readdata2) 
+				end else if(stage == 32'h1 && reg_readdata1 == reg_readdata2) 
 				begin
 					reg_addr1 = instruction[11:8];
 					reg_addr2 = instruction[ 7:4];
@@ -222,7 +222,7 @@ module Chip8_CPU(
 				//Set Vx = kk.
 				//The interpreter puts the value kk into register Vx.
 
-				if(stage == 8'h0) begin
+				if(stage == 32'h0) begin
 					reg_addr1 = instruction[11:8];
 					reg_writedata1 = instruction[7:0];
 					reg_WE1 = 1'b1;
@@ -235,9 +235,9 @@ module Chip8_CPU(
 				//Set Vx = Vx + kk.
 				//Adds the value kk to the value of register Vx, then stores the
 				//result in Vx. 
-				if(stage == 8'h0) begin
+				if(stage == 32'h0) begin
 					reg_addr1 = instruction[11:8];
-				end else if(stage == 8'h1) begin
+				end else if(stage == 32'h1) begin
 					reg_addr1 = instruction[11:8];
 					reg_writedata1 = alu_out;
 					reg_WE1 = 1'b1;
@@ -252,10 +252,10 @@ module Chip8_CPU(
 
 			//Arithmetic operators
 			16'h8???: begin //8xyk
-				if(stage == 8'h0) begin
+				if(stage == 32'h0) begin
 					reg_addr1 = instruction[11:8];
 					reg_addr2 = instruction[ 7:0];
-				end else if(stage == 8'h1) begin
+				end else if(stage == 32'h1) begin
 					case (instruction[3:0])
 						4'h0: begin //8xy0 - LD Vx, Vy
 							//Set Vx = Vy.
@@ -426,7 +426,7 @@ module Chip8_CPU(
 				//The values of Vx and Vy are compared, and if they are not 
 				//equal, the program counter is increased by 2.
 
-				if(stage == 8'h0) begin
+				if(stage == 32'h0) begin
 					reg_addr1 = instruction[11:8];
 					reg_addr2 = instruction[ 7:4];
 				end else if(reg_readdata1 != reg_readdata2) begin
@@ -441,7 +441,7 @@ module Chip8_CPU(
 			16'hA???: begin //Annn - LD I, addr
 				//Set I = nnn.
 				//The value of register I is set to nnn.
-				if(stage == 8'h0) begin
+				if(stage == 32'h0) begin
 					reg_I_WE = 1'b1;
 					reg_I_writedata = {4'h0, instruction[11:0]};
 				end else begin
@@ -454,9 +454,9 @@ module Chip8_CPU(
 				//Jump to location nnn + V0.
 				//The program counter is set to nnn plus the value of V0.
 
-				if(stage == 8'h0) begin
+				if(stage == 32'h0) begin
 					reg_addr1 = 4'h0;
-				end else if(stage == 8'h1) begin
+				end else if(stage == 32'h1) begin
 					alu_cmd = ALU_f_ADD;
 					alu_in1 = reg_readdata1;
 					alu_in2 = instruction[11:0];
@@ -474,7 +474,7 @@ module Chip8_CPU(
 				//is then ANDed with the value kk. The results are stored in Vx. 
 				//See instruction 8xy2 for more information on AND.
 
-				if(stage == 8'h0) begin
+				if(stage == 32'h0) begin
 					alu_cmd = ALU_f_AND;
 					alu_in1 = rand_num;
 					alu_in2 = instruction[7:0];
@@ -503,10 +503,10 @@ module Chip8_CPU(
 				//2.4, Display, for more information on the Chip-8 screen and 
 				//sprites.
 
-				if(stage == 8'h0) begin
+				if(stage == 32'h0) begin
 					reg_addr1 = instruction[11:8];
 					reg_addr2 = instruction[ 7:4];
-				end else if(stage == 8'h1) begin
+				end else if(stage == 32'h1) begin
 					reg_addr1 = instruction[11:8];
 					reg_addr2 = instruction[ 7:4];
 					mem_addr1 = reg_I_readdata;
@@ -514,19 +514,19 @@ module Chip8_CPU(
 					fbvx_read_addr = reg_readdata1;
 					fbvy_read_addr = reg_readdata2;
 				end else if(stage <= instruction[3:0]) begin
-					mem_addr1 = reg_I_readdata + stage - 1;
+					mem_addr1 = reg_I_readdata + stage[3:0] - 1;
 					reg_addr1 = instruction[11:8];
 					reg_addr2 = instruction[ 7:4];
 
 					fbvx_read_addr = reg_readdata1;
-					fbvy_read_addr = reg_readdata2 + stage - 1;
+					fbvy_read_addr = reg_readdata2 + stage[3:0] - 1;
 
 					alu_cmd = ALU_f_XOR;
 					alu_in1 = mem_readdata1;
 					alu_in2 = fb_readdata;
 
 					fbvx_write_addr = reg_readdata1;
-					fbvy_write_addr = reg_readdata2 + stage - 2;
+					fbvy_write_addr = reg_readdata2 + stage[3:0] - 2;
 					fb_WE = 1'b1;
 					fb_writedata = alu_out;
 
@@ -542,7 +542,7 @@ module Chip8_CPU(
 				//Checks the keyboard, and if the key corresponding to the value 
 				//of Vx is currently in the down position, PC is increased by 2.
 
-				if(stage == 8'h0) begin
+				if(stage == 32'h0) begin
 					reg_addr1 = instruction[11:8];
 				end else if(key_pressed && key_press == reg_readdata1) begin
 					pc_src = PC_SRC_SKIP;
@@ -558,7 +558,7 @@ module Chip8_CPU(
 				//Checks the keyboard, and if the key corresponding to the value 
 				//of Vx is currently in the up position, PC is increased by 2.
 
-				if(stage == 8'h0) begin
+				if(stage == 32'h0) begin
 					reg_addr1 = instruction[11:8];
 				end else if(key_pressed && key_press != reg_readdata1) begin
 					pc_src = PC_SRC_SKIP;
@@ -573,7 +573,7 @@ module Chip8_CPU(
 				//Set Vx = delay timer value.
 				//The value of DT is placed into Vx.
 
-				if(stage == 8'h0) begin
+				if(stage == 32'h0) begin
 					reg_addr1 = instruction[11:8];
 					reg_writedata1 = delay_timer_readdata;
 					reg_WE1 = 1'b1;
@@ -587,7 +587,7 @@ module Chip8_CPU(
 				//All execution stops until a key is pressed, then the value of 
 				//that key is stored in Vx.
 
-				if(stage == 8'h0) begin
+				if(stage == 32'h0) begin
 					halt_for_keypress = 1'b1;
 				end else if(key_pressed) begin
 					halt_for_keypress = 1'b0;
@@ -603,9 +603,9 @@ module Chip8_CPU(
 				//Set delay timer = Vx.
 				//DT is set equal to the value of Vx.
 
-				if(stage == 8'h0) begin
+				if(stage == 32'h0) begin
 					reg_addr1 = instruction[11:8];
-				end else if(stage == 8'h1) begin
+				end else if(stage == 32'h1) begin
 					delay_timer_writedata = reg_readdata1;
 					delay_timer_WE = 1'b1;
 				end else begin
@@ -617,9 +617,9 @@ module Chip8_CPU(
 				//Set sound timer = Vx.
 				//ST is set equal to the value of Vx.
 
-				if(stage == 8'h0) begin
+				if(stage == 32'h0) begin
 					reg_addr1 = instruction[11:8];
-				end else if(stage == 8'h1) begin
+				end else if(stage == 32'h1) begin
 					sound_timer_writedata = reg_readdata1;
 					sound_timer_WE = 1'b1;
 				end else begin
@@ -632,9 +632,9 @@ module Chip8_CPU(
 				//The values of I and Vx are added, and the results are stored 
 				//in I.
 
-				if(stage == 8'h0) begin
+				if(stage == 32'h0) begin
 					reg_addr1 = instruction[11:8];
-				end else if(stage == 8'h1) begin
+				end else if(stage == 32'h1) begin
 					alu_cmd = ALU_f_ADD;
 					alu_in1 = reg_I_readdata;
 					alu_in2 = reg_readdata1;
@@ -655,9 +655,9 @@ module Chip8_CPU(
 				//The chip8 fontset has each character starting from 0 to 80,
 				//where each character takes 5 bytes each. 
 
-				if(stage == 8'h0) begin
+				if(stage == 32'h0) begin
 					reg_addr1 = instruction[11:8];
-				end else if(stage == 8'h1) begin
+				end else if(stage == 32'h1) begin
 					reg_I_writedata = {12'h0, reg_readdata1[11:8]} * 5;
 					reg_I_WE = 1'b1;
 				end else begin
@@ -672,16 +672,16 @@ module Chip8_CPU(
 				//hundreds digit in memory at location in I, the tens digit at 
 				//location I+1, and the ones digit at location I+2.
 
-				if(stage == 8'h0) begin
+				if(stage == 32'h0) begin
 					reg_addr1 = instruction[11:8];
-				end else if(stage == 8'h1) begin
+				end else if(stage == 32'h1) begin
 					to_bcd = reg_readdata1;
 					reg_addr1 = instruction[11:8];
 
 					mem_addr1 = reg_I_readdata;
 					mem_writedata1 = bcd_hundreds;
 					mem_WE1 = 1'b1;
-				end else if(stage == 8'h2) begin
+				end else if(stage == 32'h2) begin
 					to_bcd = reg_readdata1;
 					reg_addr1 = instruction[11:8];
 
@@ -692,7 +692,7 @@ module Chip8_CPU(
 					mem_addr1 = alu_out;
 					mem_writedata2 = bcd_tens;
 					mem_WE1 = 1'b1;
-				end else if(stage == 8'h3) begin
+				end else if(stage == 32'h3) begin
 					to_bcd = reg_readdata1;
 					// reg_addr1 = instruction[11:8];
 
@@ -713,7 +713,7 @@ module Chip8_CPU(
 				//The interpreter copies the values of registers V0 through Vx 
 				//into memory, starting at the address in I.
 
-				if(stage == 8'h0) begin
+				if(stage == 32'h0) begin
 					mem_addr1 = reg_I_readdata;
 				end else if(stage <= instruction[11:8] + 1) begin
 					alu_cmd = ALU_f_ADD;
@@ -735,7 +735,7 @@ module Chip8_CPU(
 				//The interpreter reads values from memory starting at location 
 				//I into registers V0 through Vx.
 
-				if(stage == 8'h0) begin
+				if(stage == 32'h0) begin
 					reg_addr1 = 4'h0;
 				end else if(stage <= instruction[11:8] + 1) begin
 					reg_addr1 = stage[3:0];

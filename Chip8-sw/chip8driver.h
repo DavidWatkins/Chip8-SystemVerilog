@@ -72,6 +72,7 @@ typedef struct {
 * To write to the stack pointer
 * NNNNNNDD
 * Where DD is the number to write to the stack pointer
+* Only the last six bits are considered
 * 
 * Use ioread to read from the stack pointer
 */

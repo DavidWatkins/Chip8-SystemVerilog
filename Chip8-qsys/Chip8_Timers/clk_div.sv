@@ -1,3 +1,12 @@
+/******************************************************************************
+ * clk_div.sv
+ *
+ * A clock divider module for outputting a 60 Hz clock from a 50 MHz clock
+ *
+ * AUTHORS: Gabrielle Taylor
+ * Dependencies:
+ *****************************************************************************/
+
 module clk_div (
 	input logic clk_in,
 	input logic reset,    //resets on high

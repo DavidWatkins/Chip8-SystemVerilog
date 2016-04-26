@@ -53,7 +53,6 @@
 *.sdc
 *.tcl
 *.pin
-*.mif
 *.hex
 
 # ignore Quartus II generated folders
@@ -67,3 +66,4 @@ Chip8/
 hc_output/
 .qsys_edit/
 work/
+output_files/

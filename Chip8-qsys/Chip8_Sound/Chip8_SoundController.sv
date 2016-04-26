@@ -33,23 +33,23 @@ module Chip8_SoundController (
 );
 
 wire audio_clk;
+wire main_clk;
 
 wire [1:0] sample_end;
 wire [1:0] sample_req;
 wire [15:0] audio_output;
-
 
 //generate audio clock
 clock_pll pll (
     .refclk (OSC_50_B8A),
     .rst (reset),
     .outclk_0 (audio_clk),
-    .outclk_1 (clk)
+    .outclk_1 (main_clk)
 );
 
 //Configure registers of audio codec ssm2603
 i2c_av_config av_config (
-    .clk (clk),
+    .clk (main_clk),
     .reset (reset),
     .i2c_sclk (AUD_I2C_SCLK),
     .i2c_sdat (AUD_I2C_SDAT),
@@ -73,7 +73,6 @@ audio_codec ac (
     .AUD_DACDAT (AUD_DACDAT),
     .AUD_BCLK (AUD_BCLK)
 );
-
 
 audio_effects ae (
     .clk (audio_clk),
