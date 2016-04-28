@@ -18,7 +18,6 @@ module stack_testbench();
 	
 	initial begin
 		clk = 0;
-		out = 16'b0000_0000_0000_0000;
 		data = 16'b0000_0000_0000_0000;
 		write_enable = 2'b00;
 		forever 
@@ -35,62 +34,76 @@ module stack_testbench();
 		data = 16'b1111_0000_0000_0000;
 		write_enable = 2'b01;
 		// wait one cycle
-		repeat (1)
+		repeat (2)
 			@(posedge clk);
 		write_enable = 2'b00;
+		repeat (2)
+			@(posedge clk);
 		
 		// push to stack
 		// size = 2
 		data = 16'b0000_1111_0000_0000;
 		write_enable = 2'b01;
 		// wait one cycle
-		repeat (1)
+		repeat (2)
 			@(posedge clk);
 		write_enable = 2'b00;
+		repeat (2)
+			@(posedge clk);
 		
 		// push to stack
 		// size = 3
 		data = 16'b0000_0000_1111_0000;
 		write_enable = 2'b01;
 		// wait one cycle
-		repeat (1)
+		repeat (2)
 			@(posedge clk);
 		write_enable = 2'b00;
+		repeat (2)
+			@(posedge clk);
 		
 		// push to stack
 		// size = 4
 		data = 16'b0000_0000_0000_1111;
 		write_enable = 2'b01;
 		// wait one cycle
-		repeat (1)
+		repeat (2)
 			@(posedge clk);
 		write_enable = 2'b00;
+		repeat (2)
+			@(posedge clk);
 
 		// pop from stack
 		// size = 3
 		write_enable = 2'b10;
 		// wait one cycle
-		repeat (1)
+		repeat (2)
 			@(posedge clk);
 		write_enable = 2'b00;
+		repeat (2)
+			@(posedge clk);
 		
 		// push to stack
 		// size = 4
 		data = 16'b0000_0000_0000_1111;
 		write_enable = 2'b01;
 		// wait one cycle
-		repeat (1)
+		repeat (2)
 			@(posedge clk);
 		write_enable = 2'b00;
+		repeat (2)
+			@(posedge clk);
 
 		// pop from stack
 		// size = 3
 		// out should = 16'b0000_0000_0000_1111
 		write_enable = 2'b10;
 		// wait one cycle
-		repeat (1)
+		repeat (2)
 			@(posedge clk);
 		write_enable = 2'b00;
+		repeat (2)
+			@(posedge clk);
 		
 
 		// pop from stack
@@ -98,45 +111,55 @@ module stack_testbench();
 		// out should = 16'b0000_0000_1111_0000
 		write_enable = 2'b10;
 		// wait one cycle
-		repeat (1)
+		repeat (2)
 			@(posedge clk);
 		write_enable = 2'b00;
+		repeat (2)
+			@(posedge clk);
 		
 		// push to stack
 		// size = 3
 		data = 16'b1000_1000_1000_1000;
 		write_enable = 2'b01;
 		// wait one cycle
-		repeat (1)
+		repeat (2)
 			@(posedge clk);
 		write_enable = 2'b00;
+		repeat (2)
+			@(posedge clk);
 
 		// pop from stack
 		// size = 2
 		// out should = 16'b1000_1000_1000_1000
 		write_enable = 2'b10;
 		// wait one cycle
-		repeat (1)
+		repeat (2)
 			@(posedge clk);
 		write_enable = 2'b00;
+		repeat (2)
+			@(posedge clk);
 		
 		// pop from stack
 		// size = 1
 		// out should = 16'b0000_1111_0000_0000
 		write_enable = 2'b10;
 		// wait one cycle
-		repeat (1)
+		repeat (2)
 			@(posedge clk);
 		write_enable = 2'b00;
+		repeat (2)
+			@(posedge clk);
 		
 		// pop from stack
 		// size = 0
 		// out should = 16'b1111_0000_0000_0000
 		write_enable = 2'b10;
 		// wait one cycle
-		repeat (1)
+		repeat (2)
 			@(posedge clk);
 		write_enable = 2'b00;
+		repeat (2)
+			@(posedge clk);
 
 	end
 	
