@@ -351,7 +351,7 @@ module Chip8_Top(
 					end
 
 					//Cap of 50, since 1000 instructions/sec is reasonable
-					if(stage + 1 > 50) begin
+					if(stage + 1 > 32'd50000) begin
 						stage <= 32'h0;
 						pc <= next_pc;
 					end else begin

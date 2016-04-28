@@ -106,7 +106,7 @@
 				ALU_f_INC : begin //INC
 					intermediate = 0;
 					alu_carry = 0;
-					out = input1 + 1;
+					out = input1 + 1'h1;
 				end
 
 				default: begin
