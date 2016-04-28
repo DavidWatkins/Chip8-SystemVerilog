@@ -13,19 +13,20 @@ module stack_testbench();
 		.cpu_clk(clk), 
 		.WE(write_enable),
 		.writedata(data), 
-		.outdata(out));
+		.outdata(out)
+		);
 	
 	initial begin
 		clk = 0;
+		out = 16'b0000_0000_0000_0000;
+		data = 16'b0000_0000_0000_0000;
+		write_enable = 2'b00;
 		forever 
 			#20ns clk = ~clk;
 	end
 
 	initial begin
-		out = 16'b0000_0000_0000_0000;
-		data = 16'b0000_0000_0000_0000;
-		write_enable = 2'b00;
-
+		
 		repeat(4) 
 			@(posedge clk);
 		
