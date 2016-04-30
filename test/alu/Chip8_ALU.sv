@@ -23,7 +23,7 @@
  * 	- enums.svh
  *****************************************************************************/
  
- `include "../enums.svh"
+ `include "enums.svh"
  
  module Chip8_ALU(
 		input logic[15:0] input1, input2,
@@ -46,7 +46,7 @@
 				ALU_f_AND : begin
 					intermediate = 0;
 					alu_carry = 0;
-					out = input1 ^ input2;	
+					out = input1 & input2;	
 				end
 				
 				ALU_f_XOR : begin
