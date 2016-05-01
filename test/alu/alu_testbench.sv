@@ -114,7 +114,7 @@ module alu_testbench();
 		alu_op = ALU_f_RSHIFT;
 
 		// testing equals #1
-		// result = 0000_0000_0000_0000
+		// result = 0000_0000_0000_0001
 		repeat(2) 
 			@(posedge clk);
 		input1 = 16'b0000_1000_0011_0010;
@@ -122,7 +122,7 @@ module alu_testbench();
 		alu_op = ALU_f_EQUALS;
 
 		// testing equals #2
-		// result = 0000_0000_0000_0001
+		// result = 0000_0000_0000_0000
 		repeat(2) 
 			@(posedge clk);
 		//@(posedge clk);
@@ -131,7 +131,7 @@ module alu_testbench();
 		//alu_op = ALU_f_EQUALS;
 
 		// testing greater #1
-		// result = 0000_0000_0000_0000
+		// result = 0000_0000_0000_0001
 		repeat(2) 
 			@(posedge clk);
 		input1 = 16'b1000_1000_0011_0010;
@@ -139,7 +139,7 @@ module alu_testbench();
 		alu_op = ALU_f_GREATER;
 
 		// testing greater #2
-		// result = 0000_0000_0000_0001
+		// result = 0000_0000_0000_0000
 		repeat(2) 
 			@(posedge clk);
 		input1 = 16'b0000_1000_0011_0010;
