@@ -24,7 +24,7 @@
 
 `include "enums.svh"
 
-task testReset(logic [15:0] input1, input2, 
+task automatic testReset(logic [15:0] input1, input2, 
 				   ALU_f alu_op);
 	input1 = 16'h0000;
 	input2 = 16'h0000;
@@ -42,10 +42,10 @@ endtask
  * @expected result = 16'FFF0
  * @expected alu_carry = 1'b0
  */
-task testOR(logic clk, alu_carry,
-				logic [15:0] input1, input2, result, 
-				ALU_f alu_op, 
-				int total);
+task automatic testOR(ref logic clk, alu_carry,
+				ref logic [15:0] input1, input2, result, 
+				ref ALU_f alu_op, 
+				ref int total);
     //Setup test 1
 	repeat(2) 
 		@(posedge clk);
@@ -59,7 +59,7 @@ task testOR(logic clk, alu_carry,
 		$display ("OR TEST 1 : PASSED");
 		total = total + 1;
 	end
-    else $error("OR TEST 1 : FAILED (Got %0d, Expected 0xFFF0)", result);
+    else $error("OR TEST 1 : FAILED (Got %h, Expected fff0)", result);
 
 	testReset(input1, input2, alu_op);
 endtask
@@ -75,10 +75,10 @@ endtask
  * @expected result = 16'F000
  * @expected alu_carry = 1'b0
  */
-task testAND(logic clk, alu_carry,
-				logic [15:0] input1, input2, result, 
-				ALU_f alu_op, 
-				int total);
+task automatic testAND(ref logic clk, alu_carry,
+				ref logic [15:0] input1, input2, result, 
+				ref ALU_f alu_op, 
+				ref int total);
     //Setup test 1
 	repeat(2) 
 		@(posedge clk);
@@ -92,7 +92,7 @@ task testAND(logic clk, alu_carry,
 		$display ("AND TEST 1 : PASSED");
 		total = total + 1;
 	end
-    else $error("AND TEST 1 : FAILED (Got %0d, Expected 0xF000)", result);
+    else $error("AND TEST 1 : FAILED (Got %h, Expected f000)", result);
 
     testReset(input1, input2, alu_op);
 endtask
@@ -108,10 +108,10 @@ endtask
  * @expected result = 16'h0FF0
  * @expected alu_carry = 1'b0
  */
-task testXOR(logic clk, alu_carry,
-				logic [15:0] input1, input2, result, 
-				ALU_f alu_op, 
-				int total);
+task automatic testXOR(ref logic clk, alu_carry,
+				ref logic [15:0] input1, input2, result, 
+				ref ALU_f alu_op, 
+				ref int total);
     //Setup test 1
 	repeat(2) 
 		@(posedge clk);
@@ -125,7 +125,7 @@ task testXOR(logic clk, alu_carry,
 		$display ("XOR TEST 1 : PASSED");
 		total = total + 1;
 	end
-    else $error("XOR TEST 1 : FAILED (Got %0d, Expected 0x0FF0)", result);
+    else $error("XOR TEST 1 : FAILED (Got %h, Expected 0ff0)", result);
 
 	testReset(input1, input2, alu_op);
 endtask
@@ -148,10 +148,10 @@ endtask
  * @expected result = 16'd10
  * @expected alu_carry = 1'b1
  */
-task testADD(logic clk, alu_carry,
-				logic [15:0] input1, input2, result, 
-				ALU_f alu_op, 
-				int total);
+task automatic testADD(ref logic clk, alu_carry,
+				ref logic [15:0] input1, input2, result, 
+				ref ALU_f alu_op, 
+				ref int total);
     //Setup test 1
 	repeat(2) 
 		@(posedge clk);
@@ -207,13 +207,13 @@ endtask
  * @input input1 = 16'h7003
  * @input input2 = 16'hE0A5
  * @input alu_op = ALU_f_MINUS
- * @expected result = 16'h????
+ * @expected result = 16'd36702
  * @expected alu_carry = 1'b0
  */
-task testMINUS(logic clk, alu_carry,
-				logic [15:0] input1, input2, result, 
-				ALU_f alu_op, 
-				int total);
+task automatic testMINUS(ref logic clk, alu_carry,
+				ref logic [15:0] input1, input2, result, 
+				ref ALU_f alu_op, 
+				ref int total);
 
 	//Setup test 1
 	repeat(2) 
@@ -228,7 +228,7 @@ task testMINUS(logic clk, alu_carry,
 		$display ("MINUS TEST 1 : PASSED");
 		total = total + 1;
 	end
-    else $error("MINUS TEST 1 : FAILED (Got %0d, Expected 0x0000)", result);
+    else $error("MINUS TEST 1 : FAILED (Got %h, Expected 0000) (Got %d, Expected 1)", result, alu_carry);
 
     //Setup test 2
 	repeat(2) 
@@ -243,22 +243,22 @@ task testMINUS(logic clk, alu_carry,
 		$display ("MINUS TEST 2 : PASSED");
 		total = total + 1;
 	end
-    else $error("MINUS TEST 2 : FAILED (Got %0d, Expected 0x2222)", result);
+    else $error("MINUS TEST 2 : FAILED (Got %h, Expected 70a2) (Got %d, Expected 1)", result, alu_carry);
 
     //Setup test 3
 	repeat(2) 
 		@(posedge clk);
-	input1 = 16'hE0A5;
-	input2 = 16'h7003;
+	input1 = 16'h7003;
+	input2 = 16'hE0A5;
 	alu_op = ALU_f_MINUS;
 
 	repeat(2) 
 		@(posedge clk);
-	assert (result == 16'h0000 && alu_carry == 1'b1) begin
+	assert (result == 16'd36702 && alu_carry == 1'b1) begin
 		$display ("MINUS TEST 3 : PASSED");
 		total = total + 1;
 	end
-    else $error("MINUS TEST 3 : FAILED (Got %0d, Expected 0x????) (Got %d, Expected 1)", result, alu_carry);
+    else $error("MINUS TEST 3 : FAILED (Got %d, Expected 36702) (Got %d, Expected 1)", result, alu_carry);
 
 	testReset(input1, input2, alu_op);
 endtask
@@ -281,16 +281,16 @@ endtask
  * @expected result = 16'h2222
  * @expected alu_carry = 1'b0
  */
-task testLSHIFT(logic clk, alu_carry,
-				logic [15:0] input1, input2, result, 
-				ALU_f alu_op, 
-				int total);
+task automatic testLSHIFT(ref logic clk, alu_carry,
+				ref logic [15:0] input1, input2, result, 
+				ref ALU_f alu_op, 
+				ref int total);
 	//Setup test 1
 	repeat(2) 
 		@(posedge clk);
 	input1 = 16'h0031;
 	input2 = 16'h0002;
-	alu_op = ALU_f_RSHIFT;
+	alu_op = ALU_f_LSHIFT;
 
 	repeat(2) 
 		@(posedge clk);
@@ -298,14 +298,14 @@ task testLSHIFT(logic clk, alu_carry,
 		$display ("LSHIFT TEST 1 : PASSED");
 		total = total + 1;
 	end
-    else $error("LSHIFT TEST 1 : FAILED (Got %0d, Expected 0x00C4)", result);
+    else $error("LSHIFT TEST 1 : FAILED (Got %h, Expected 00c4)", result);
 
     //Setup test 2
 	repeat(2) 
 		@(posedge clk);
 	input1 = 16'h1111;
 	input2 = 16'h0001;
-	alu_op = ALU_f_RSHIFT;
+	alu_op = ALU_f_LSHIFT;
 
 	repeat(2) 
 		@(posedge clk);
@@ -313,7 +313,7 @@ task testLSHIFT(logic clk, alu_carry,
 		$display ("LSHIFT TEST 2 : PASSED");
 		total = total + 1;
 	end
-    else $error("LSHIFT TEST 2 : FAILED (Got %0d, Expected 0x2222)", result);
+    else $error("LSHIFT TEST 2 : FAILED (Got %h, Expected 2222)", result);
 
 	testReset(input1, input2, alu_op);
 endtask
@@ -336,10 +336,10 @@ endtask
  * @expected result = 16'h0888
  * @expected alu_carry = 1'b0
  */
-task testRSHIFT(logic clk, alu_carry,
-				logic [15:0] input1, input2, result, 
-				ALU_f alu_op, 
-				int total);
+task automatic testRSHIFT(ref logic clk, alu_carry,
+				ref logic [15:0] input1, input2, result, 
+				ref ALU_f alu_op, 
+				ref int total);
 	//Setup test 1
 	repeat(2) 
 		@(posedge clk);
@@ -353,7 +353,7 @@ task testRSHIFT(logic clk, alu_carry,
 		$display ("RSHIFT TEST 1 : PASSED");
 		total = total + 1;
 	end
-    else $error("RSHIFT TEST 1 : FAILED (Got %0d, Expected 0x000C)", result);
+    else $error("RSHIFT TEST 1 : FAILED (Got %h, Expected 000c)", result);
 
     //Setup test 2
 	repeat(2) 
@@ -368,7 +368,7 @@ task testRSHIFT(logic clk, alu_carry,
 		$display ("RSHIFT TEST 2 : PASSED");
 		total = total + 1;
 	end
-    else $error("RSHIFT TEST 2 : FAILED (Got %0d, Expected 0x0888)", result);
+    else $error("RSHIFT TEST 2 : FAILED (Got %h, Expected 0888)", result);
 
 	testReset(input1, input2, alu_op);
 endtask
@@ -387,21 +387,21 @@ endtask
  * @test 2
  * @input input1 = 16'd15
  * @input input2 = 16'd180
- * @input alu_op = ALU_f_EQUALS
+ * @input alu_op = ALU_f_GREATER
  * @expected result = 16'd0
  * @expected alu_carry = 1'b0
  *
  * @test 3
  * @input input1 = 16'd15
  * @input input2 = 16'd15
- * @input alu_op = ALU_f_EQUALS
+ * @input alu_op = ALU_f_GREATER
  * @expected result = 16'd0
  * @expected alu_carry = 1'b0
  */
-task testGREATER(logic clk, alu_carry,
-				logic [15:0] input1, input2, result, 
-				ALU_f alu_op, 
-				int total);
+task automatic testGREATER(ref logic clk, alu_carry,
+				ref logic [15:0] input1, input2, result, 
+				ref ALU_f alu_op, 
+				ref int total);
 	//Setup test 1
 	repeat(2) 
 		@(posedge clk);
@@ -435,7 +435,7 @@ task testGREATER(logic clk, alu_carry,
     //Setup test 3
 	repeat(2) 
 		@(posedge clk);
-	input1 = 16'd180;
+	input1 = 16'd15;
 	input2 = 16'd15;
 	alu_op = ALU_f_GREATER;
 
@@ -468,10 +468,10 @@ endtask
  * @expected result = 16'd0
  * @expected alu_carry = 1'b0
  */
-task testEQUALS(logic clk, alu_carry,
-				logic [15:0] input1, input2, result, 
-				ALU_f alu_op, 
-				int total);
+task automatic testEQUALS(ref logic clk, alu_carry,
+				ref logic [15:0] input1, input2, result, 
+				ref ALU_f alu_op, 
+				ref int total);
 	//Setup test 1
 	repeat(2) 
 		@(posedge clk);
@@ -515,10 +515,10 @@ endtask
  * @expected result = 16'd26
  * @expected alu_carry = 1'b0
  */
-task testINC(logic clk, alu_carry,
-				logic [15:0] input1, input2, result, 
-				ALU_f alu_op, 
-				int total);
+task automatic testINC(ref logic clk, alu_carry,
+				ref logic [15:0] input1, input2, result, 
+				ref ALU_f alu_op, 
+				ref int total);
 	//Setup
 	repeat(2) 
 		@(posedge clk);
@@ -533,7 +533,7 @@ task testINC(logic clk, alu_carry,
 	//Check
 	repeat(2) 
 		@(posedge clk);
-	assert (result == 16'd26 && alu_carry == 1'b0) begin
+	assert (result == 16'd25 && alu_carry == 1'b0) begin
 		$display ("INC TEST : PASSED");
 		total = total + 1;
 	end
@@ -563,11 +563,13 @@ module alu_testbench();
 		input1 = 16'h0000;
 		input2 = 16'h0000;
 		alu_op = ALU_f_NOP;
+		$display("Hello World!");
 		forever 
 			#20ns clk = ~clk;
 	end
 
 	initial begin
+		$display("Starting test script...");
 		testOR(clk, alu_carry, input1, input2, result, alu_op, total);
 		testAND(clk, alu_carry, input1, input2, result, alu_op, total);
 		testXOR(clk, alu_carry, input1, input2, result, alu_op, total);
@@ -575,8 +577,8 @@ module alu_testbench();
 		testMINUS(clk, alu_carry, input1, input2, result, alu_op, total);
 		testLSHIFT(clk, alu_carry, input1, input2, result, alu_op, total);
 		testRSHIFT(clk, alu_carry, input1, input2, result, alu_op, total);
-		testEQUALS(clk, alu_carry, input1, input2, result, alu_op, total);
 		testGREATER(clk, alu_carry, input1, input2, result, alu_op, total);
+		testEQUALS(clk, alu_carry, input1, input2, result, alu_op, total);
 		testINC(clk, alu_carry, input1, input2, result, alu_op, total);
 		
 		$display("TESTS PASSED : %d", total);

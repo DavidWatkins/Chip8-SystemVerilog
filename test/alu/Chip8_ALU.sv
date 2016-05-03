@@ -29,7 +29,9 @@
 		
 		output logic[15:0] out,
 		output logic alu_carry);
-				
+		
+		logic[15:0] intermediate;
+		
 		always_comb begin
 			case	(sel) 
 
@@ -49,12 +51,12 @@
 				end
 
 				ALU_f_ADD : begin
-					alu_carry = |(out[15:8]);
 					out = input1 + input2;
+					alu_carry = |(out[15:8]);
 				end
 
 				ALU_f_MINUS : begin
-					alu_carry = input1 > input2;
+					alu_carry = input1 < input2;
 					out = input1 - input2;
 				end
 
@@ -78,7 +80,7 @@
 					out = (input1 > input2);
 				end
 
-				ALU_f_INC : begin //INC
+				ALU_f_INC : begin
 					alu_carry = 0;
 					out = input1 + 1'h1;
 				end
