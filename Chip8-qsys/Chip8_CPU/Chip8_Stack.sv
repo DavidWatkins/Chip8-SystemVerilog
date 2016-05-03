@@ -5,38 +5,44 @@ module Chip8_Stack(
 			output logic [15:0]	outdata);	//data output when 
 			
 			logic	[3:0]  address;
-			logic	  clock;
 			logic	[15:0]  data;
 			logic	  wren;
 			logic	[15:0]  q;
 			
 			stack_ram stack(address, cpu_clk, data, wren, q);
 			
-			logic[7:0] stackptr;
-			//logic[15:0][15:0] stack;
-			
-			//default
+			logic[3:0] stackptr = 4'h0;
+			logic secondcycle = 1'h0;
 			
 			
 			
 			always_ff @(posedge cpu_clk) begin
 			
-				address = 		16'h0;
+				address = 		4'h0;
 				data = 			16'h0;
 				wren = 			1'h0;
 			
 				if(WE == 2'd1) begin
-					//stack[stackptr] <= writedata;
 					address <= stackptr;
 					data <= writedata;
-					wren <= 1'h1;
-					stackptr <= stackptr + 1'h1;
+					if(secondcycle == 1'h0) begin
+						wren <= 1'h1;
+						secondcycle <= 1'h1;
+					end else begin
+						wren <= 1'h0;
+						stackptr <= stackptr + 4'b0001;
+						secondcycle <= 1'h0;
+					end
 				end if (WE == 2'd2) begin
-					address <= stackptr + 1'h1;
+					address <= stackptr - 4'b0001;
 					wren <= 1'h0;
 					outdata <= q;
-					//outdata <= stack[stackptr - 1];
-					stackptr <= stackptr - 1'h1;
+					if(secondcycle == 1'h0) begin
+						secondcycle <= 1'h1;
+						stackptr <= stackptr - 4'b0001;
+					end else begin
+						secondcycle <= 1'h0;
+					end
 				end
 			end
 endmodule
