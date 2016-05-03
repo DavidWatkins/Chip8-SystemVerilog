@@ -1,165 +1,65 @@
-/*********************
-* Stack Test Bench
-* GT
-*********************/
+/******************************************************************************
+ * Stack Test Bench
+ *
+ * Author: Gabrielle Taylor
+ *****************************************************************************/
 
 module stack_testbench();
 	logic clk;
-	logic [15:0] data;
-	logic [1:0] write_enable;
-	logic [15:0] out;
+	logic reset;
+	logic [4:0] fb_addr_y;
+	logic [5:0] fb_addr_x;
+	logic fb_writedata;
+	logic fb_WE;
+	logic fb_readdata;
+	logic [7:0] VGA_R, VGA_G, VGA_B;
+	logic VGA_CLK, VGA_HS, VGA_VS, VGA_BLANK_n;
+	logic VGA_SYNC_n;
 	
-	Chip8_Stack dut(
-		.cpu_clk(clk), 
-		.WE(write_enable),
-		.writedata(data), 
-		.outdata(out)
-		);
+	Chip8_framebuffer dut(.*);
 	
 	initial begin
 		clk = 0;
-		data = 16'b0000_0000_0000_0000;
-		write_enable = 2'b00;
+		fb_addr_y = 5'b00000;
+		fb_addr_x = 6'b000000;
+		fb_writedata = 0;
+		fb_WE = 0;
 		forever 
 			#20ns clk = ~clk;
 	end
 
 	initial begin
 		
-		repeat(4) 
-			@(posedge clk);
+		repeat(4) @(posedge clk);
 		
-		// push to stack
-		// size = 1
-		data = 16'b1111_0000_0000_0000;
-		write_enable = 2'b01;
-		// wait one cycle
-		repeat (2)
-			@(posedge clk);
-		write_enable = 2'b00;
-		repeat (2)
-			@(posedge clk);
+		fb_addr_y = 5'b00001;
+		fb_addr_x = 6'b000001;
+		fb_writedata = 1;
+		fb_WE = 1;
+		repeat(2) @(posedge clk);
 		
-		// push to stack
-		// size = 2
-		data = 16'b0000_1111_0000_0000;
-		write_enable = 2'b01;
-		// wait one cycle
-		repeat (2)
-			@(posedge clk);
-		write_enable = 2'b00;
-		repeat (2)
-			@(posedge clk);
-		
-		// push to stack
-		// size = 3
-		data = 16'b0000_0000_1111_0000;
-		write_enable = 2'b01;
-		// wait one cycle
-		repeat (2)
-			@(posedge clk);
-		write_enable = 2'b00;
-		repeat (2)
-			@(posedge clk);
-		
-		// push to stack
-		// size = 4
-		data = 16'b0000_0000_0000_1111;
-		write_enable = 2'b01;
-		// wait one cycle
-		repeat (2)
-			@(posedge clk);
-		write_enable = 2'b00;
-		repeat (2)
-			@(posedge clk);
+		fb_addr_y = 5'b00010;
+		fb_addr_x = 6'b000010;
+		fb_writedata = 1;
+		repeat(2) @(posedge clk);
 
-		// pop from stack
-		// size = 3
-		write_enable = 2'b10;
-		// wait one cycle
-		repeat (2)
-			@(posedge clk);
-		write_enable = 2'b00;
-		repeat (2)
-			@(posedge clk);
-		
-		// push to stack
-		// size = 4
-		data = 16'b0000_0000_0000_1111;
-		write_enable = 2'b01;
-		// wait one cycle
-		repeat (2)
-			@(posedge clk);
-		write_enable = 2'b00;
-		repeat (2)
-			@(posedge clk);
+		fb_addr_y = 5'b00100;
+		fb_addr_x = 6'b000100;
+		fb_writedata = 1;
+		repeat(2) @(posedge clk);
 
-		// pop from stack
-		// size = 3
-		// out should = 16'b0000_0000_0000_1111
-		write_enable = 2'b10;
-		// wait one cycle
-		repeat (2)
-			@(posedge clk);
-		write_enable = 2'b00;
-		repeat (2)
-			@(posedge clk);
-		
+		fb_addr_y = 5'b01000;
+		fb_addr_x = 6'b001000;
+		fb_writedata = 1;
+		repeat(2) @(posedge clk);
 
-		// pop from stack
-		// size = 2
-		// out should = 16'b0000_0000_1111_0000
-		write_enable = 2'b10;
-		// wait one cycle
-		repeat (2)
-			@(posedge clk);
-		write_enable = 2'b00;
-		repeat (2)
-			@(posedge clk);
-		
-		// push to stack
-		// size = 3
-		data = 16'b1000_1000_1000_1000;
-		write_enable = 2'b01;
-		// wait one cycle
-		repeat (2)
-			@(posedge clk);
-		write_enable = 2'b00;
-		repeat (2)
-			@(posedge clk);
+		fb_addr_y = 5'b10000;
+		fb_addr_x = 6'b010000;
+		fb_writedata = 1;
+		repeat(2) @(posedge clk);
 
-		// pop from stack
-		// size = 2
-		// out should = 16'b1000_1000_1000_1000
-		write_enable = 2'b10;
-		// wait one cycle
-		repeat (2)
-			@(posedge clk);
-		write_enable = 2'b00;
-		repeat (2)
-			@(posedge clk);
-		
-		// pop from stack
-		// size = 1
-		// out should = 16'b0000_1111_0000_0000
-		write_enable = 2'b10;
-		// wait one cycle
-		repeat (2)
-			@(posedge clk);
-		write_enable = 2'b00;
-		repeat (2)
-			@(posedge clk);
-		
-		// pop from stack
-		// size = 0
-		// out should = 16'b1111_0000_0000_0000
-		write_enable = 2'b10;
-		// wait one cycle
-		repeat (2)
-			@(posedge clk);
-		write_enable = 2'b00;
-		repeat (2)
-			@(posedge clk);
+		fb_WE = 0;
+		repeat(2) @(posedge clk);
 
 	end
 	
