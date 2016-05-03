@@ -17,7 +17,6 @@
  * enum defined in enums.svh
  *
  * AUTHORS: David Watkins, Ashley Kling
- * Tested: Gabrielle Taylor 5/3/2016
  * Dependencies:
  * 	- enums.svh
  *****************************************************************************/
@@ -30,74 +29,61 @@
 		
 		output logic[15:0] out,
 		output logic alu_carry);
-		
-		logic[15:0] intermediate;
-		
+				
 		always_comb begin
 			case	(sel) 
 
 				ALU_f_OR : begin
-					intermediate = 0;
 					alu_carry = 0;
 					out = input1 | input2;
 				end
 
 				ALU_f_AND : begin
-					intermediate = 0;
 					alu_carry = 0;
 					out = input1 & input2;	
 				end
 				
 				ALU_f_XOR : begin
-					intermediate = 0;
 					alu_carry = 0;
 					out = input1 ^ input2;	
 				end
 
 				ALU_f_ADD : begin
-					intermediate = 0;
 					alu_carry = |(out[15:8]);
 					out = input1 + input2;
 				end
 
 				ALU_f_MINUS : begin
-					intermediate = 0;
 					alu_carry = input1 > input2;
 					out = input1 - input2;
 				end
 
 				ALU_f_LSHIFT : begin
-					intermediate = 0;
 					alu_carry = 0;
 					out = input1 << input2;
 				end
 
 				ALU_f_RSHIFT : begin
-					intermediate = 0;
 					alu_carry = 0;
 					out = input1 >> input2;
 				end
 
 				ALU_f_EQUALS : begin
-					intermediate = 0;
 					alu_carry = 0;
 					out = (input1 == input2);
 				end
 
 				ALU_f_GREATER : begin
-					intermediate = 0;
 					alu_carry = 0;
 					out = (input1 > input2);
 				end
 
 				ALU_f_INC : begin //INC
-					intermediate = 0;
 					alu_carry = 0;
 					out = input1 + 1'h1;
 				end
 
 				default: begin
-					intermediate = 0;
 					alu_carry = 0;
 					out = 0;
 				end
