@@ -563,7 +563,6 @@ module alu_testbench();
 		input1 = 16'h0000;
 		input2 = 16'h0000;
 		alu_op = ALU_f_NOP;
-		$display("Hello World!");
 		forever 
 			#20ns clk = ~clk;
 	end
