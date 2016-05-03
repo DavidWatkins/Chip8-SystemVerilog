@@ -56,7 +56,7 @@
 
 				ALU_f_ADD : begin
 					intermediate = 0;
-					alu_carry = (out > 8'65535);
+					alu_carry = |(out[15:8]);
 					out = input1 + input2;
 				end
 
