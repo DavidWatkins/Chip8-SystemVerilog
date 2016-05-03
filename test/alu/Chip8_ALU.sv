@@ -6,19 +6,18 @@
  * 	- AND 		- bitwise AND
  * 	- XOR		- bitwise XOR
  * 	- ADD		- Addition
- * 	- SUB		- Subtract
+ * 	- MINUS		- Subtract
  * 	- LSHIFT	- Shift left
  * 	- RSHIFT	- Shift right
  * 	- EQUALS 	- Equals compare
  * 	- GREATER	- Greater than compare
- * 	- LSB		- Least significant bit
- * 	- MSB		- Most significant bit
  * 	- INC 		- Increment
  * 
  * This module is solely used by the Chip8_CPU module, and relies on the ALU_f
  * enum defined in enums.svh
  *
  * AUTHORS: David Watkins, Ashley Kling
+ * Tested: Gabrielle Taylor 5/3/2016
  * Dependencies:
  * 	- enums.svh
  *****************************************************************************/
@@ -56,9 +55,9 @@
 				end
 
 				ALU_f_ADD : begin
-					intermediate = input1 + input2;
-					out = intermediate[7:0];
-					alu_carry = (intermediate > 8'd255);
+					intermediate = 0;
+					alu_carry = (out > 8'65535);
+					out = input1 + input2;
 				end
 
 				ALU_f_MINUS : begin
@@ -89,18 +88,6 @@
 					intermediate = 0;
 					alu_carry = 0;
 					out = (input1 > input2);
-				end
-
-				ALU_f_LSB : begin //LSB = 1
-					intermediate = 0;
-					alu_carry = 0;
-					out = (input1[0] == 1);
-				end
-
-				ALU_f_MSB : begin //MSB = 1
-					intermediate = 0;
-					alu_carry = 0;
-					out = (input1[7] == 1);
 				end
 
 				ALU_f_INC : begin //INC

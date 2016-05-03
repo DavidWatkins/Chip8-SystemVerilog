@@ -4,6 +4,7 @@
  * Defines the enums used by Chip8_Top, Chip8_ALU, Chip8_CPU
  *
  * AUTHORS: David Watkins
+ * Updated: Gabrielle Taylor 5/3/2016
  * Dependencies:
  *****************************************************************************/
 
@@ -22,8 +23,6 @@
  * 	- ALU_f_RSHIFT	: Shift right
  * 	- ALU_f_EQUALS 	: Equals compare
  * 	- ALU_f_GREATER	: Greater than compare
- * 	- ALU_f_LSB		: Least significant bit
- * 	- ALU_f_MSB		: Most significant bit
  * 	- ALU_f_INC 	: Increment
  */
 typedef enum { 
@@ -36,8 +35,6 @@ typedef enum {
 	ALU_f_RSHIFT, 
 	ALU_f_EQUALS, 
 	ALU_f_GREATER, 
-	ALU_f_MSB, 
-	ALU_f_LSB, 
 	ALU_f_INC, 
 	ALU_f_NOP
 } ALU_f ;

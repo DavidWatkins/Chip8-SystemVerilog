@@ -1,6 +1,7 @@
 /*****************************************************************************
  * ALU Test Bench
- * GT
+ *
+ * Author: Gabrielle Taylor
  *****************************************************************************/
 
 `include "enums.svh"
@@ -145,34 +146,6 @@ module alu_testbench();
 		input1 = 16'b0000_1000_0011_0010;
 		input2 = 16'b1000_1000_0011_0010;
 		//alu_op = ALU_f_GREATER;
-
-		// testing MSB #1
-		// result = 0000_0000_0000_0000
-		repeat(2) 
-			@(posedge clk);
-		input1 = 16'b0000_1000_0011_1000;
-		alu_op = ALU_f_MSB;
-
-		// testing MSB #2
-		// result = 0000_0000_0000_0001
-		repeat(2) 
-			@(posedge clk);
-		input1 = 16'b1000_1000_0011_0010;
-		//alu_op = ALU_f_MSB;
-
-		// testing LSB #1
-		// result = 0000_0000_0000_0000
-		repeat(2) 
-			@(posedge clk);
-		input1 = 16'b0000_1000_0011_1000;
-		alu_op = ALU_f_LSB;
-
-		// testing LSB #2
-		// result = 0000_0000_0000_0001
-		repeat(2) 
-			@(posedge clk);
-		input1 = 16'b0000_1000_0011_0011;
-		//alu_op = ALU_f_LSB;
 
 		// testing increment
 		// result = 0000_0000_0000_1001
