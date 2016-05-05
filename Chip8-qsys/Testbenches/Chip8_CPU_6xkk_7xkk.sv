@@ -1,7 +1,6 @@
 `timescale 1ns/100ps
 
 `include "../enums.svh"
-//`include "../utils.svh"
 
 /**
  * Test to make sure that after an instruction happens, 
@@ -75,12 +74,13 @@ task automatic test7xkk(ref logic cpu_clk,
 					ref int failed,
 					ref logic reg_WE1, reg_WE2,
 					ref logic[3:0] reg_addr1, reg_addr2,
-					ref logic[7:0] reg_writedata1, reg_writedata2);
+					ref logic[7:0] reg_writedata1, reg_writedata2,
+										reg_readdata1);
 	
 	repeat (2) @(posedge cpu_clk);
 	stage = 32'h0;
-	instruction = 16'h7E54;
-	
+	instruction = 16'h7EF0;
+	reg_readdata1 = 8'h01;
 	
 	wait(stage == 32'h2); #1ns;
 	assert(reg_addr1 == instruction[11:8])
@@ -88,7 +88,7 @@ task automatic test7xkk(ref logic cpu_clk,
 	
 	wait(stage == 32'h3); #1ns;
 	assert(reg_addr1 == instruction[11:8] &
-				//cannot check reg_writedata1 without register file
+				(reg_writedata1 == (reg_readdata1 + instruction[7:0])) &
 				reg_WE1 == 1'b1 
 				//cannot check alu_in1, alu_in2, alu_cmd without internal access
 				) begin
@@ -211,7 +211,7 @@ module Chip8_CPU_6xkk_7xkk( ) ;
 			fb_writedata,fb_WE, fbreset,halt_for_keypress);
 			
 		test7xkk(cpu_clk, instruction, stage,total,failed,reg_WE1, reg_WE2,
-					reg_addr1, reg_addr2, reg_writedata1, reg_writedata2);
+					reg_addr1, reg_addr2, reg_writedata1, reg_writedata2, reg_readdata1);
 
 		test_resets(stage, total,failed,delay_timer_WE, sound_timer_WE,
 			delay_timer_writedata, sound_timer_writedata, /*PC_SRC pc_src,*/
@@ -223,22 +223,6 @@ module Chip8_CPU_6xkk_7xkk( ) ;
 		$display("Total number of tests passed: %d", total);
 		$display("Total number of tests failed: %d", failed);
 	end
-	/*
-	initial begin 
-		repeat (2) @(posedge cpu_clk);
-		stage = 32'h0;
-		repeat (1) @(posedge cpu_clk);
-		
-		instruction = 16'h61F0;
-		
-		
-		wait(instruction && 16'h61F0 && stage == 32'h2);
-		#1ns;
-		assert((reg_addr1 == 4'h1) && (reg_writedata1 == 8'hF0) && (reg_WE1 == 1'h1))
-			$display("6xkk passed with instr %h", instruction);
-		else 
-			$display("6xkk FAILED with instr %h", instruction);
-	end
-	*/
+
 	
 endmodule
