@@ -47,16 +47,15 @@ module Chip8_Top(
     output AUD_MUTE         //Audio mute
 );
 
-    logic [15:0]    I;
-    logic [5:0]     sp;
-    logic [63:0][11:0]  stack;
+    //Index register
+    logic [15:0] I;
 
     //Program counter
-    logic [7:0]     pc_state;
-    logic [11:0]    pc;
-    logic [11:0]    next_pc;
-    logic [31:0]    stage;
-    logic           halt_for_keypress;
+    logic [7:0]  pc_state;
+    logic [11:0] pc;
+    logic [11:0] next_pc;
+    logic [31:0] stage;
+    logic        halt_for_keypress;
 
     //Framebuffer values
     logic       fbreset;
@@ -106,7 +105,7 @@ module Chip8_Top(
 
     //Sound
     // logic sound_on;
-    logic       sound_reset;
+    logic sound_reset;
 
     //Timers
     logic       clk_div_reset, clk_div_clk_out;
@@ -116,9 +115,10 @@ module Chip8_Top(
     logic [7:0] sound_timer_data, sound_timer_output_data;
 
     //Stack
-    logic STACK_OP stack_op;         //write enable: [0,0] = nothing, [0,1] = push, [1,0] = pop
-    logic [15:0] writedata;  //input PC
-    logic [15:0] outdata;
+    logic           stack_reset;
+    logic STACK_OP  stack_op;
+    logic [15:0]    writedata;
+    logic [15:0]    outdata;
 
     //State
     Chip8_STATE state;
@@ -135,7 +135,6 @@ module Chip8_Top(
             delay_timer_write_enable <= 1'b0;
             sound_timer_write_enable <= 1'b0;
             I <= 16'h0;
-            sp <= 6'h0;
             fbreset <= 1'b0;
             fbwrite <= 1'b0;
             regWE1 <= 1'b0;
@@ -144,6 +143,8 @@ module Chip8_Top(
             state <= Chip8_PAUSED;
             cpu_instruction <= 16'h0;
             stage <= 32'h0;
+
+            stack_reset <= 1'b1;
 
         //Handle input from the ARM processor
         end else if(chipselect) begin
@@ -513,6 +514,7 @@ module Chip8_Top(
     );
 
     Chip8_Stack stack (
+        .reset(stack_reset),
         .cpu_clk(clk),
         .op(stack_op),
         .writedata(stack_writedata),
