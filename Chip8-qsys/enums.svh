@@ -73,4 +73,17 @@ typedef enum {
 	Chip8_PAUSED
  } Chip8_STATE;
 
+/**
+ * STACK_OP defines the behavior of the stack
+ *
+ * STACK_POP 	: Pop the stack and write out value
+ * STACK_PUSH 	: Push the input onto the stack
+ * STACK_HOLD 	: Do nothing
+ */
+ typedef enum {
+ 	STACK_POP,
+ 	STACK_PUSH,
+ 	STACK_HOLD
+ } STACK_OP;
+
 `endif
