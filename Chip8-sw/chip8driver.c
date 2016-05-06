@@ -124,7 +124,7 @@ static long chip8_ioctl(struct file *f, unsigned int cmd, unsigned long arg)
 			return -EACCES;
 		if (!isValidInstruction(op.addr, op.data, 1))
 			return -EINVAL;
-		write_op(op.opcode);
+		write_op(op.addr, op.data);
 		break;
 
 	case CHIP8_READ_ATTR:
@@ -133,7 +133,7 @@ static long chip8_ioctl(struct file *f, unsigned int cmd, unsigned long arg)
 		if (!!isValidInstruction(op.addr, op.data, 0))
 			return -EINVAL;
 
-		op.readdata = ioread32(op.addr);
+		op.readdata = read_value(op.addr);
 		if (copy_to_user((chip8_opcode *) arg, &op, sizeof(chip8_opcode)))
 			return -EACCES;
 		break;
@@ -164,8 +164,6 @@ static struct miscdevice chip8_misc_device = {
  */
 static int __init chip8_probe(struct platform_device *pdev)
 {
-	//Place ball at (320,240) with radius 3
-	static unsigned int init_pos[3] = {SCREEN_WIDTH/2, SCREEN_HEIGHT/2, 20};
 	int ret;
 
 	/* Register ourselves as a misc device: creates /dev/chip8 */
@@ -192,7 +190,7 @@ static int __init chip8_probe(struct platform_device *pdev)
 	}
 
 	/* Write paused state to the chip8 device */
-	write_op((STATE_WRITE_ADDR << 16) | PAUSED_STATE);
+	write_op(STATE_ADDR, PAUSED_STATE);
 
 	return 0;
 
