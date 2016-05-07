@@ -88,6 +88,11 @@
 	parameter chip_hend = 7'd 64;
 	parameter chip_vend = 6'd 32; 
 
+	parameter left_bound = 7'd64;
+	parameter right_bound = 10'd576;
+	parameter top_bound = 7'd112;
+	parameter bottom_bound = 9'd368;
+	
 	logic[11:0] fb_pos;
 	assign fb_request_addr = (((vcount[8:0] - top_bound) >> (4'd3))*(7'd64)) + ((hcount[10:1] - left_bound) >> (4'd3));
 
@@ -110,10 +115,6 @@
 //   			((vcount[8:0]) >= (chip_vend * (5'd8) + 7'd112))  & ((vcount[8:0]) < (chip_vend * (5'd8) + 10'd368));
 		
 		
-		parameter left_bound = 7'd64;
-		parameter right_bound = 10'd576;
-		parameter top_bound = 7'd112;
-		parameter bottom_bound = 9'd368;
 		assign inChip = (	((hcount[10:1]) >= (left_bound)) &
 								((hcount[10:1]) <  (right_bound))	&
 								((vcount[8:0])  >= (top_bound)) &
