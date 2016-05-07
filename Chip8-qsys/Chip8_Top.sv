@@ -26,7 +26,6 @@ module Chip8_Top(
     input logic         write,
     input               chipselect,
     input logic [17:0]  address,
-	 input logic			key_pressed,
 
     output logic [31:0] data_out,
 
@@ -273,7 +272,7 @@ module Chip8_Top(
             case (state)
                 Chip8_RUNNING: begin
                     if(halt_for_keypress) begin
-                        if(key_pressed) begin
+                        if(ispressed) begin
                             halt_for_keypress <= 1'b0;
                         end
                     end else if(stage == 32'h0) begin
