@@ -26,6 +26,7 @@ module Chip8_Top(
     input logic         write,
     input               chipselect,
     input logic [17:0]  address,
+	 input logic			key_pressed,
 
     output logic [31:0] data_out,
 
@@ -58,12 +59,12 @@ module Chip8_Top(
     logic        halt_for_keypress;
 
     //Framebuffer values
-    logic       fbreset;
-    logic [7:0] fbvx_read, fbvy_read;
-    logic [7:0] fbvx_write, fbvy_write;
-    logic [7:0] fbdata;
-    logic       fbwrite;
-    logic [7:0] fb_readdata;
+    logic			fbreset;
+	logic [4:0]	fb_addr_y;//max val = 31
+	logic [5:0] fb_addr_x;//max val = 63
+	logic			fb_writedata; //data to write to addresse.
+	logic					fb_WE; //enable writing to address
+	logic		fb_readdata; //data to write to addresse.
 
     //Keyboard
     logic       ispressed;
@@ -97,10 +98,11 @@ module Chip8_Top(
     logic [15:0] cpu_reg_I_writedata;
     logic        cpu_sp_push, cpu_sp_pop;
     logic        cpu_fbreset;
-    logic [5:0]  cpu_fbvx_read_addr, cpu_fbvy_read_addr;
-    logic [5:0]  cpu_fbvx_write_addr, cpu_fbvy_write_addr;
-    logic        cpu_fb_WE;
-    logic [7:0]  cpu_fb_writedata;
+    logic [4:0]	cpu_fb_addr_y;
+	 logic [5:0]	cpu_fb_addr_x;
+	 logic			cpu_fb_writedata; 
+	 logic			cpu_fb_readdata;
+	 logic						cpu_fb_WE; 
     logic        cpu_halt_for_keypress;
 
     //Sound
@@ -116,30 +118,36 @@ module Chip8_Top(
 
     //Stack
     logic           stack_reset;
-    logic STACK_OP  stack_op;
-    logic [15:0]    writedata;
-    logic [15:0]    outdata;
-
+    STACK_OP  stack_op;
+    logic [15:0]    stack_writedata;
+    logic [15:0]    stack_outdata;
+	 
     //State
     Chip8_STATE state;
 
     always_ff @(posedge clk) begin
         if(reset) begin
             //Add initial values for code
-            pc <= 16'h200;
+            pc <= 12'h200;
 
-            fbwrite <= 1'b0;
             memWE1 <= 1'b0;
             memWE2 <= 1'b0;
             cpu_instruction <= 16'h0;
             delay_timer_write_enable <= 1'b0;
             sound_timer_write_enable <= 1'b0;
             I <= 16'h0;
-            fbreset <= 1'b0;
-            fbwrite <= 1'b0;
             regWE1 <= 1'b0;
             regWE2 <= 1'b0;
-
+				
+            fbreset <= 1'b0;
+				fb_addr_y <= 5'b0;
+				fb_addr_x <= 6'b0;
+				fb_writedata <= 1'b0; 
+				fb_WE <= 1'b0;
+				
+				cpu_sp_push <= 1'b0; 
+				cpu_sp_pop <= 1'b0;
+				
             state <= Chip8_PAUSED;
             cpu_instruction <= 16'h0;
             stage <= 32'h0;
@@ -194,8 +202,9 @@ module Chip8_Top(
                     
                     //Read/write to stack pointer
                     17'h13 : begin
-                        data_out <= {26'b0, sp};
-                        if(write) sp <= writedata[5:0]; //0-63
+                        $display("READ/WRITE TO STACK POINTER NOT IMPLEMENTED");
+								//data_out <= {26'b0, sp};
+                        //if(write) sp <= writedata[5:0]; //0-63
                     end
 
                     //Read/write to program counter
@@ -215,7 +224,7 @@ module Chip8_Top(
 
                     //Read/write the state of the emulator
                     17'h16 : begin
-                        data_out <= {30'b0, state};
+                        data_out <= state;
                         if(write) begin
                             case (writedata[1:0])
                                 2'h0: state <= Chip8_RUNNING;
@@ -229,22 +238,31 @@ module Chip8_Top(
 
                     //Modify framebuffer
                     17'h17 : begin
-                        fbvx_read <= writedata[11:8];
-                        fbvy_read <= writedata[7:4];
-                        data_out <=  {24'h0, fb_readdata};
-
+								$display("17'h17 modify framebuffer is possibly out of date.");
+                        //fbvx_read <= writedata[11:8];
+                        //fbvy_read <= writedata[7:4];
+                        //data_out <=  {24'h0, fb_readdata};
+								data_out <= {31'h0, fb_readdata};
+								fb_addr_x <= writedata[11:8];
+								fb_addr_y <= writedata[7:4];
+								fb_WE <= 1'b0;
                         if(write) begin 
-                            fbvx_write <= writedata[11:8]; 
-                            fbvy_write <= writedata[7:4];
-                            fbdata <= writedata[3:0];
-                            fbwrite <= 1'b1;
+									 fb_addr_x <= writedata[11:8];
+									 fb_addr_y <= writedata[7:4];
+									 data_out <= data_out <= {31'h0, fb_readdata};
+									 fb_WE <= 1'b1;
+                            //fbvx_write <= writedata[11:8]; 
+                            //fbvy_write <= writedata[7:4];
+                            //fbdata <= writedata[3:0];
+                            //fbwrite <= 1'b1;
                         end
                     end
-
+							
                     //Read/write stack
                     17'h18 : begin 
-                        data_out <= {20'b0, stack[sp]};
-                        if(write) stack[sp] <= 1'b0;
+								$display("READ/WRITE STACK NOT IMPLEMENTED");
+							//   data_out <= {20'b0, stack[sp]};
+                     //  if(write) stack[sp] <= 1'b0;
                     end 
 
                 endcase
@@ -260,7 +278,7 @@ module Chip8_Top(
                         end
                     end else if(stage == 32'h0) begin
                         memaddr1 <= pc;
-                        memaddr2 <= pc + 1; 
+                        memaddr2 <= pc + 12'h1; 
                         cpu_instruction <= 16'h0;
                     end else if (stage == 32'h1) begin
                         cpu_instruction[15:8] <= memreaddata1;
@@ -316,22 +334,26 @@ module Chip8_Top(
                         end
 
                         if(cpu_sp_push) begin
-                            if(sp + 1 < 64)
-                                sp <= sp + 1;
-                            stack[sp] <= pc;
+                            stack_op <= STACK_PUSH;
+									 stack_writedata <= pc;
+									 //if(sp + 1 < 64)
+                            //    sp <= sp + 1;
+                            //stack[sp] <= pc;
                         end 
 
                         if(cpu_sp_pop) begin
-                            if(sp - 1 >= 0)
-                                sp <= sp - 1;
-                            // pc <= stack[sp];
-                            next_pc <= stack[sp];
+									stack_op <= STACK_POP;
+									pc <= stack_outdata[11:0];
+								//    if(sp - 1 >= 0)
+                        //        sp <= sp - 1;
+                        //    // pc <= stack[sp];
+                        //    next_pc <= stack[sp];
                         end else begin
                             case (cpu_pc_src)
                                 PC_SRC_ALU  : next_pc <= cpu_PC_writedata;
-                                PC_SRC_SKIP : next_pc <= pc + 4;
-                                PC_SRC_NEXT : next_pc <= pc + 2;
-                                default : next_pc <= pc + 2;
+                                PC_SRC_SKIP : next_pc <= pc + 12'd4;
+                                PC_SRC_NEXT : next_pc <= pc + 12'd2;
+                                default : next_pc <= pc + 12'd2;
                             endcase
                         end
 
@@ -342,12 +364,15 @@ module Chip8_Top(
                         end
 
                         if(cpu_fb_WE) begin
-                            fbwrite <= 1'b1;
-                            fbdata <= cpu_fb_writedata;
-                            fbvx_write <= cpu_fbvx_write_addr;
-                            fbvy_write <= cpu_fbvy_write_addr;
+                            //fbwrite <= 1'b1;
+                            //fbdata <= cpu_fb_writedata;
+                            //fbvx_write <= cpu_fbvx_write_addr;
+                            //fbvy_write <= cpu_fbvy_write_addr;
+									fb_writedata <= cpu_fb_writedata;
+									fb_WE <= cpu_fb_WE;
                         end else begin
-                            fbwrite <= 1'b0;
+                            fb_WE <= 1'b0;
+									 
                         end
 
                         // cpu_halt_for_keypress;
@@ -356,8 +381,8 @@ module Chip8_Top(
                         //Always
                         reg_addr1 <= cpu_reg_addr1;
                         reg_addr2 <= cpu_reg_addr2;
-                        fbvx_read <= cpu_fbvx_read_addr;
-                        fbvy_read <= cpu_fbvy_read_addr;
+                        fb_addr_x <= cpu_fb_addr_x;
+                        fb_addr_y <= cpu_fb_addr_y;
                         memaddr1 <= cpu_mem_addr1;
                         memaddr2 <= cpu_mem_addr2;
                     end
@@ -384,13 +409,11 @@ module Chip8_Top(
     Chip8_framebuffer framebuffer(
         .clk(clk),
         .reset(fbreset),
-        .fbvx_read(fbvx_read),
-        .fbvy_read(fbvy_read),
-        .fbvx_write(fbvx_write),
-        .fbvy_write(fbvy_write),
-        .fbdata(fbdata),
-        .write(fbwrite),
-        .fb_readdata(fb_readdata),
+		  .fb_addr_y(fb_addr_y),
+		  .fb_addr_x(fb_addr_x),
+		  .fb_writedata(fb_writedata),
+		  .fb_WE(fb_WE),
+		  .fb_readdata(fb_readdata),
         .VGA_R(VGA_R),
         .VGA_G(VGA_G),
         .VGA_B(VGA_B),
@@ -439,7 +462,6 @@ module Chip8_Top(
         .PC_readdata(pc),
         .stage(stage),
         .top_level_state(state),
-        .fb_readdata(fb_readdata),
         .delay_timer_WE(cpu_delay_timer_WE),
         .sound_timer_WE(cpu_sound_timer_WE),
         .delay_timer_writedata(cpu_delay_timer_writedata),
@@ -460,15 +482,14 @@ module Chip8_Top(
         .mem_writedata2(cpu_mem_writedata2),
         .reg_I_WE(cpu_reg_I_WE),
         .reg_I_writedata(cpu_reg_I_writedata),
-        .sp_push(cpu_sp_push),
-        .sp_pop(cpu_sp_pop),
         .fbreset(cpu_fbreset),
-        .fbvx_read_addr(cpu_fbvx_read_addr),
-        .fbvy_read_addr(cpu_fbvy_read_addr),
-        .fbvx_write_addr(cpu_fbvx_write_addr),
-        .fbvy_write_addr(cpu_fbvy_write_addr),
-        .fb_WE(cpu_fb_WE),
-        .fb_writedata(cpu_fb_writedata),
+        
+		  	.fb_addr_y(cpu_fb_addr_y),
+			.fb_addr_x(cpu_fb_addr_x),
+			.fb_writedata(cpu_fb_writedata), 
+			.fb_WE(cpu_fb_WE), 
+			.fb_readdata(fb_readdata),
+		  
         .halt_for_keypress(cpu_halt_for_keypress)
     );
 

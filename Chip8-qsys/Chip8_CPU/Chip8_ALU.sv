@@ -17,12 +17,11 @@
  * enum defined in enums.svh
  *
  * AUTHORS: David Watkins, Ashley Kling
- * Tested: Gabrielle Taylor 5/3/2016
  * Dependencies:
  * 	- enums.svh
  *****************************************************************************/
  
- `include "../enums.svh"
+ `include "enums.svh"
  
  module Chip8_ALU(
 		input logic[15:0] input1, input2,
@@ -37,67 +36,56 @@
 			case	(sel) 
 
 				ALU_f_OR : begin
-					intermediate = 0;
 					alu_carry = 0;
 					out = input1 | input2;
 				end
 
 				ALU_f_AND : begin
-					intermediate = 0;
 					alu_carry = 0;
 					out = input1 & input2;	
 				end
 				
 				ALU_f_XOR : begin
-					intermediate = 0;
 					alu_carry = 0;
 					out = input1 ^ input2;	
 				end
 
 				ALU_f_ADD : begin
-					intermediate = 0;
-					alu_carry = |(out[15:8]);
 					out = input1 + input2;
+					alu_carry = |(out[15:8]);
 				end
 
 				ALU_f_MINUS : begin
-					intermediate = 0;
-					alu_carry = input1 > input2;
+					alu_carry = input1 < input2;
 					out = input1 - input2;
 				end
 
 				ALU_f_LSHIFT : begin
-					intermediate = 0;
 					alu_carry = 0;
 					out = input1 << input2;
 				end
 
 				ALU_f_RSHIFT : begin
-					intermediate = 0;
 					alu_carry = 0;
 					out = input1 >> input2;
 				end
 
 				ALU_f_EQUALS : begin
-					intermediate = 0;
 					alu_carry = 0;
 					out = (input1 == input2);
 				end
 
 				ALU_f_GREATER : begin
-					intermediate = 0;
 					alu_carry = 0;
 					out = (input1 > input2);
 				end
 
-				ALU_f_INC : begin //INC
-					intermediate = 0;
+				ALU_f_INC : begin
 					alu_carry = 0;
 					out = input1 + 1'h1;
 				end
 
 				default: begin
-					intermediate = 0;
 					alu_carry = 0;
 					out = 0;
 				end
