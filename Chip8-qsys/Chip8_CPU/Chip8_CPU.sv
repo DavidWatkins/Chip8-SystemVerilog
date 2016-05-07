@@ -58,7 +58,9 @@ module Chip8_CPU(
 	output logic reg_I_WE,
 	output logic[15:0] reg_I_writedata,
 
-	output logic sp_push, sp_pop,
+	output logic stk_reset, 
+	output STACK_OP stk_op,
+	output logic[15:0] stk_writedata,
 
 	output logic [4:0]	fb_addr_y,//max val = 31
 	output logic [5:0]	fb_addr_x,//max val = 63
@@ -131,6 +133,7 @@ module Chip8_CPU(
 		alu_in2 				= 16'h0;
 		alu_cmd 				= ALU_f_NOP;
 		to_bcd 					= 8'h0;
+		stk_op				= STACK_HOLD;
 		/*END DEFAULT VALUES*/
 		
 		
@@ -160,7 +163,7 @@ module Chip8_CPU(
 				//The interpreter sets the program counter to the address at the
 				//top of the stack, then subtracts 1 from the stack pointer.
 				if(stage == 32'h2) begin
-					sp_pop = 1'b1;
+					stk_op = STACK_POP;
 					pc_src = PC_SRC_STACK;
 				end else begin
 					//CPU DONE
@@ -184,7 +187,8 @@ module Chip8_CPU(
 				//current PC on the top of the stack. The PC is then set to nnn.
 
 				if(stage == 32'h2) begin
-					sp_push = 1'b1;
+					stk_op = STACK_PUSH;
+					stk_writedata = pc_readdata;
 					pc_src = PC_SRC_ALU;
 					PC_writedata = instruction[11:0];
 				end else begin

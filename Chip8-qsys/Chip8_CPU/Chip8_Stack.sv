@@ -39,6 +39,7 @@ module Chip8_Stack(
 							wren <= 1'h0;
 							stackptr <= stackptr + 4'b0001;
 							secondcycle <= 1'h0;
+							hold <= 1'b1;
 						end
 					end
 				end
