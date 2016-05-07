@@ -21,7 +21,7 @@
  * 	- enums.svh
  *****************************************************************************/
  
- `include "enums.svh"
+ `include "../enums.svh"
  
  module Chip8_ALU(
 		input logic[15:0] input1, input2,
