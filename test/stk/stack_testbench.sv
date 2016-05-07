@@ -19,7 +19,7 @@ task automatic testReset(logic [15:0] data, logic rst, STACK_OP stk_op);
 	
 endtask
 
-task automatic testStack(ref logic clk, rst, ref logic [15:0] data, out
+task automatic testStack(ref logic clk, rst, ref logic [15:0] data, out,
 			ref STACK_OP op, ref int total);
 	
 	repeat (2) 
@@ -123,7 +123,7 @@ task automatic testStack(ref logic clk, rst, ref logic [15:0] data, out
 		
 	// push to stack
 	// size = 2
-	data = 16'd34954;
+	data = 16'd34952;
 	op = STACK_PUSH;
 	// wait one cycle
 	repeat (2)
@@ -142,7 +142,7 @@ task automatic testStack(ref logic clk, rst, ref logic [15:0] data, out
 	op = STACK_HOLD;
 	repeat (2)
 		@(posedge clk);
-	assert (out == 16'd3840) begin
+	assert (out == 16'd34952) begin
 		$display ("STACK TEST 4 : PASSED");
 		total = total + 1;
 	end
@@ -150,7 +150,7 @@ task automatic testStack(ref logic clk, rst, ref logic [15:0] data, out
 		
 	// pop from stack
 	// size = 0
-	// out should = 16'd61140
+	// out should = 16'd61440
 	op = STACK_POP;
 	// wait one cycle
 	repeat (2)
@@ -158,11 +158,11 @@ task automatic testStack(ref logic clk, rst, ref logic [15:0] data, out
 	op = STACK_HOLD;
 	repeat (2)
 		@(posedge clk);	
-	assert (out == 16'd61140) begin
+	assert (out == 16'd61440) begin
 		$display ("STACK TEST 5 : PASSED");
 		total = total + 1;
 	end
-    else $error("STACK TEST 5 : FAILED (Pushed 61140, Popped %d)", out);
+    else $error("STACK TEST 5 : FAILED (Pushed 61440, Popped %d)", out);
 	
 endtask
 
@@ -188,6 +188,7 @@ module stack_testbench();
 		rst = 0;
 		data = 16'd0;
 		op = STACK_HOLD;
+		total = 0;
 		forever 
 			#20ns clk = ~clk;
 	end
@@ -195,7 +196,7 @@ module stack_testbench();
 	initial begin
 		
 		$display("Starting test script...");
-		testStack(clk, rst, op, data, out);
+		testStack(clk, rst, data, out, op, total);
 		$display("TESTS PASSED : %d", total);
 		
 	end
