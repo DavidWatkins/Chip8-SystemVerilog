@@ -117,8 +117,6 @@ module Chip8_CPU(
 		mem_writedata2			= 8'h0;
 		reg_I_WE 				= 1'b0;
 		reg_I_writedata			= 16'h0;
-		sp_push 				= 1'b0;
-		sp_pop 					= 1'b0;
 		fb_addr_y	=	5'h0;
 		fb_addr_x	=	6'h0;
 		fb_writedata	=	1'b0;
@@ -134,6 +132,8 @@ module Chip8_CPU(
 		alu_cmd 				= ALU_f_NOP;
 		to_bcd 					= 8'h0;
 		stk_op				= STACK_HOLD;
+		stk_reset 	= 1'b0;
+		stk_writedata 	= 16'b0;
 		/*END DEFAULT VALUES*/
 		
 		
@@ -188,7 +188,7 @@ module Chip8_CPU(
 
 				if(stage == 32'h2) begin
 					stk_op = STACK_PUSH;
-					stk_writedata = pc_readdata;
+					stk_writedata = PC_readdata;
 					pc_src = PC_SRC_ALU;
 					PC_writedata = instruction[11:0];
 				end else begin
@@ -626,7 +626,7 @@ module Chip8_CPU(
 
 				if(stage == 32'h2) begin
 					reg_addr1 = instruction[11:8];
-				end else if(key_pressed && key_press != reg_readdata1) begin
+				end else if(key_press != reg_readdata1) begin
 					pc_src = PC_SRC_SKIP;
 				end else begin
 					//CPU DONE
