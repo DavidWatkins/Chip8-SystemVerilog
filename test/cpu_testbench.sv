@@ -16,6 +16,200 @@
 	reg_readdata2 = 8'h0;
 	
 endtask
+
+//test 3xkk, which skips the next instruction if Vx = kk
+task automatic test3xkk_part1(ref logic clk,
+									ref PC_SRC pc_src,
+									ref logic[15:0] instruction,
+									ref logic[7:0] reg_readdata1, reg_readdata2,
+									ref logic[31:0] stage,
+									ref logic[7:0] reg_writedata1, reg_writedata2,
+									ref logic reg_WE1, reg_WE2,
+									ref logic[3:0] reg_addr1, reg_addr2,
+									ref int total);
+									
+	repeat(4) @(posedge clk);
+	instruction[15:12] = 4'h3;
+	instruction[11:8] = 4'h1;
+	instruction[7:4] = 4'h0;
+	instruction[3:0] = 4'h5;
+	
+	repeat(2) @(posedge clk);
+	stage = stage + 1;
+	reg_readdata1 = 8'h5;
+	repeat(2) @(posedge clk);
+	stage = stage + 1;
+	repeat(2) @(posedge clk);
+		assert (pc_src == PC_SRC_SKIP) begin
+			$display ("3xkk part 1 TEST : PASSED");
+			total = total + 1;
+		end
+		else $error("3xkk part 1 TEST : FAILED (Got %h, Expected skip)", pc_src);
+	
+	testreset(instruction, stage, reg_readdata1, reg_readdata2);
+endtask
+
+//test 3xkk, which skips the next instruction if Vx = kk (testing Vx != kk)
+task automatic test3xkk_part2(ref logic clk,
+									ref PC_SRC pc_src,
+									ref logic[15:0] instruction,
+									ref logic[7:0] reg_readdata1, reg_readdata2,
+									ref logic[31:0] stage,
+									ref logic[7:0] reg_writedata1, reg_writedata2,
+									ref logic reg_WE1, reg_WE2,
+									ref logic[3:0] reg_addr1, reg_addr2,
+									ref int total);
+									
+	repeat(4) @(posedge clk);
+	instruction[15:12] = 4'h3;
+	instruction[11:8] = 4'h1;
+	instruction[7:4] = 4'h0;
+	instruction[3:0] = 4'h5;
+	
+	repeat(2) @(posedge clk);
+	stage = stage + 1;
+	reg_readdata1 = 8'h7;
+	repeat(2) @(posedge clk);
+	stage = stage + 1;
+	repeat(2) @(posedge clk);
+		assert (pc_src == PC_SRC_NEXT) begin
+			$display ("3xkk part 2 TEST : PASSED");
+			total = total + 1;
+		end
+		else $error("3xkk part 2 TEST : FAILED (Got %h, Expected next)", pc_src);
+	
+	testreset(instruction, stage, reg_readdata1, reg_readdata2);
+endtask
+
+//test 4xkk, which skips the next instruction if Vx != kk
+task automatic test4xkk_part1(ref logic clk,
+									ref PC_SRC pc_src,
+									ref logic[15:0] instruction,
+									ref logic[7:0] reg_readdata1, reg_readdata2,
+									ref logic[31:0] stage,
+									ref logic[7:0] reg_writedata1, reg_writedata2,
+									ref logic reg_WE1, reg_WE2,
+									ref logic[3:0] reg_addr1, reg_addr2,
+									ref int total);
+									
+	repeat(4) @(posedge clk);
+	instruction[15:12] = 4'h4;
+	instruction[11:8] = 4'h2;
+	instruction[7:4] = 4'h0;
+	instruction[3:0] = 4'h7;
+	
+	repeat(2) @(posedge clk);
+	stage = stage + 1;
+	reg_readdata1 = 8'h2;
+	repeat(2) @(posedge clk);
+	stage = stage + 1;
+	repeat(2) @(posedge clk);
+		assert (pc_src == PC_SRC_SKIP) begin
+			$display ("4xkk part 1 TEST : PASSED");
+			total = total + 1;
+		end
+		else $error("4xkk part 1 TEST : FAILED (Got %h, Expected skip)", pc_src);
+	
+	testreset(instruction, stage, reg_readdata1, reg_readdata2);
+endtask
+
+//test 4xkk, which skips the next instruction if Vx != kk (testing Vx = kk)
+task automatic test4xkk_part2(ref logic clk,
+									ref PC_SRC pc_src,
+									ref logic[15:0] instruction,
+									ref logic[7:0] reg_readdata1, reg_readdata2,
+									ref logic[31:0] stage,
+									ref logic[7:0] reg_writedata1, reg_writedata2,
+									ref logic reg_WE1, reg_WE2,
+									ref logic[3:0] reg_addr1, reg_addr2,
+									ref int total);
+									
+	repeat(4) @(posedge clk);
+	instruction[15:12] = 4'h4;
+	instruction[11:8] = 4'h2;
+	instruction[7:4] = 4'h0;
+	instruction[3:0] = 4'h8;
+	
+	repeat(2) @(posedge clk);
+	stage = stage + 1;
+	reg_readdata1 = 8'h8;
+	repeat(2) @(posedge clk);
+	stage = stage + 1;
+	repeat(2) @(posedge clk);
+		assert (pc_src == PC_SRC_NEXT) begin
+			$display ("4xkk part 2 TEST : PASSED");
+			total = total + 1;
+		end
+		else $error("4xkk part 2 TEST : FAILED (Got %h, Expected next)", pc_src);
+	
+	testreset(instruction, stage, reg_readdata1, reg_readdata2);
+endtask
+
+//test 5xy0, which skips the next instruction if Vx = Vy
+task automatic test5xy0_part1(ref logic clk,
+									ref PC_SRC pc_src,
+									ref logic[15:0] instruction,
+									ref logic[7:0] reg_readdata1, reg_readdata2,
+									ref logic[31:0] stage,
+									ref logic[7:0] reg_writedata1, reg_writedata2,
+									ref logic reg_WE1, reg_WE2,
+									ref logic[3:0] reg_addr1, reg_addr2,
+									ref int total);
+									
+	repeat(4) @(posedge clk);
+	instruction[15:12] = 4'h5;
+	instruction[11:8] = 4'h2;
+	instruction[7:4] = 4'h3;
+	instruction[3:0] = 4'h0;
+	
+	repeat(2) @(posedge clk);
+	stage = stage + 1;
+	reg_readdata1 = 8'h9;
+	reg_readdata2 = 8'h9;
+	repeat(2) @(posedge clk);
+	stage = stage + 1;
+	repeat(2) @(posedge clk);
+		assert (pc_src == PC_SRC_SKIP) begin
+			$display ("5xy0 part 1 TEST : PASSED");
+			total = total + 1;
+		end
+		else $error("5xy0 part 1 TEST : FAILED (Got %h, Expected skip)", pc_src);
+	
+	testreset(instruction, stage, reg_readdata1, reg_readdata2);
+endtask
+
+//test 5xy0, which skips the next instruction if Vx = Vy (testing Vx != Vy)
+task automatic test5xy0_part2(ref logic clk,
+									ref PC_SRC pc_src,
+									ref logic[15:0] instruction,
+									ref logic[7:0] reg_readdata1, reg_readdata2,
+									ref logic[31:0] stage,
+									ref logic[7:0] reg_writedata1, reg_writedata2,
+									ref logic reg_WE1, reg_WE2,
+									ref logic[3:0] reg_addr1, reg_addr2,
+									ref int total);
+									
+	repeat(4) @(posedge clk);
+	instruction[15:12] = 4'h5;
+	instruction[11:8] = 4'h2;
+	instruction[7:4] = 4'h3;
+	instruction[3:0] = 4'h0;
+	
+	repeat(2) @(posedge clk);
+	stage = stage + 1;
+	reg_readdata1 = 8'h8;
+	reg_readdata2 = 8'hb;
+	repeat(2) @(posedge clk);
+	stage = stage + 1;
+	repeat(2) @(posedge clk);
+		assert (pc_src == PC_SRC_NEXT) begin
+			$display ("5xy0 part 2 TEST : PASSED");
+			total = total + 1;
+		end
+		else $error("5xy0 part 2 TEST : FAILED (Got %h, Expected next)", pc_src);
+	
+	testreset(instruction, stage, reg_readdata1, reg_readdata2);
+endtask
  
  //test 8xy0, which sets register x to the value of register y
  task automatic test8xy0(ref logic clk,
@@ -464,6 +658,288 @@ task automatic test8xyE_part2(ref logic clk,
 	testreset(instruction, stage, reg_readdata1, reg_readdata2);
 endtask
 
+//test 9xy0, which skips the next instruction if Vx != Vy
+task automatic test9xy0_part1(ref logic clk,
+									ref PC_SRC pc_src,
+									ref logic[15:0] instruction,
+									ref logic[7:0] reg_readdata1, reg_readdata2,
+									ref logic[31:0] stage,
+									ref logic[7:0] reg_writedata1, reg_writedata2,
+									ref logic reg_WE1, reg_WE2,
+									ref logic[3:0] reg_addr1, reg_addr2,
+									ref int total);
+									
+	repeat(4) @(posedge clk);
+	instruction[15:12] = 4'h9;
+	instruction[11:8] = 4'h2;
+	instruction[7:4] = 4'h4;
+	instruction[3:0] = 4'h0;
+	
+	repeat(2) @(posedge clk);
+	stage = stage + 1;
+	reg_readdata1 = 8'h3;
+	reg_readdata2 = 8'hd;
+	repeat(2) @(posedge clk);
+	stage = stage + 1;
+	repeat(2) @(posedge clk);
+		assert (pc_src == PC_SRC_SKIP) begin
+			$display ("9xy0 part 1 TEST : PASSED");
+			total = total + 1;
+		end
+		else $error("9xy0 part 1 TEST : FAILED (Got %h, Expected skip)", pc_src);
+	
+	testreset(instruction, stage, reg_readdata1, reg_readdata2);
+endtask
+
+//test 9xy0, which skips the next instruction if Vx != Vy (testing Vx = Vy)
+task automatic test9xy0_part2(ref logic clk,
+									ref PC_SRC pc_src,
+									ref logic[15:0] instruction,
+									ref logic[7:0] reg_readdata1, reg_readdata2,
+									ref logic[31:0] stage,
+									ref logic[7:0] reg_writedata1, reg_writedata2,
+									ref logic reg_WE1, reg_WE2,
+									ref logic[3:0] reg_addr1, reg_addr2,
+									ref int total);
+									
+	repeat(4) @(posedge clk);
+	instruction[15:12] = 4'h9;
+	instruction[11:8] = 4'h2;
+	instruction[7:4] = 4'h5;
+	instruction[3:0] = 4'h0;
+	
+	repeat(2) @(posedge clk);
+	stage = stage + 1;
+	reg_readdata1 = 8'hc;
+	reg_readdata2 = 8'hc;
+	repeat(2) @(posedge clk);
+	stage = stage + 1;
+	repeat(2) @(posedge clk);
+		assert (pc_src == PC_SRC_NEXT) begin
+			$display ("9xy0 part 2 TEST : PASSED");
+			total = total + 1;
+		end
+		else $error("9xy0 part 2 TEST : FAILED (Got %h, Expected next)", pc_src);
+	
+	testreset(instruction, stage, reg_readdata1, reg_readdata2);
+endtask
+
+//test Ex9E, which skips the next instruction if Vx = key pressed
+task automatic testEx9E_part1(ref logic clk,
+									ref logic key_pressed,
+									ref logic[3:0] key_press,
+									ref PC_SRC pc_src,
+									ref logic[15:0] instruction,
+									ref logic[7:0] reg_readdata1, reg_readdata2,
+									ref logic[31:0] stage,
+									ref logic[7:0] reg_writedata1, reg_writedata2,
+									ref logic reg_WE1, reg_WE2,
+									ref logic[3:0] reg_addr1, reg_addr2,
+									ref int total);
+									
+	repeat(4) @(posedge clk);
+	instruction[15:12] = 4'hE;
+	instruction[11:8] = 4'h2;
+	instruction[7:4] = 4'h9;
+	instruction[3:0] = 4'hE;
+	
+	repeat(2) @(posedge clk);
+	stage = stage + 1;
+	reg_readdata1 = 8'hd;
+	key_pressed = 1'h1;
+	key_press = 4'hd;
+	repeat(2) @(posedge clk);
+	stage = stage + 1;
+	repeat(2) @(posedge clk);
+		assert (pc_src == PC_SRC_SKIP) begin
+			$display ("Ex9E part 1 TEST : PASSED");
+			total = total + 1;
+		end
+		else $error("Ex9E part 1 TEST : FAILED (Got %h, Expected skip)", pc_src);
+	
+	testreset(instruction, stage, reg_readdata1, reg_readdata2);
+endtask
+
+//test Ex9E, which skips the next instruction if Vx = key pressed (testing Vx != key)
+task automatic testEx9E_part2(ref logic clk,
+									ref logic key_pressed,
+									ref logic[3:0] key_press,
+									ref PC_SRC pc_src,
+									ref logic[15:0] instruction,
+									ref logic[7:0] reg_readdata1, reg_readdata2,
+									ref logic[31:0] stage,
+									ref logic[7:0] reg_writedata1, reg_writedata2,
+									ref logic reg_WE1, reg_WE2,
+									ref logic[3:0] reg_addr1, reg_addr2,
+									ref int total);
+									
+	repeat(4) @(posedge clk);
+	instruction[15:12] = 4'hE;
+	instruction[11:8] = 4'h2;
+	instruction[7:4] = 4'h9;
+	instruction[3:0] = 4'hE;
+	
+	repeat(2) @(posedge clk);
+	stage = stage + 1;
+	reg_readdata1 = 8'hc;
+	key_pressed = 1'h1;
+	key_press = 4'h8;
+	repeat(2) @(posedge clk);
+	stage = stage + 1;
+	repeat(2) @(posedge clk);
+		assert (pc_src == PC_SRC_NEXT) begin
+			$display ("Ex9E part 2 TEST : PASSED");
+			total = total + 1;
+		end
+		else $error("Ex9E part 2 TEST : FAILED (Got %h, Expected next)", pc_src);
+	
+	testreset(instruction, stage, reg_readdata1, reg_readdata2);
+endtask
+
+//test Ex9E, which skips the next instruction if Vx = key pressed (testing no key pressed)
+task automatic testEx9E_part3(ref logic clk,
+									ref logic key_pressed,
+									ref logic[3:0] key_press,
+									ref PC_SRC pc_src,
+									ref logic[15:0] instruction,
+									ref logic[7:0] reg_readdata1, reg_readdata2,
+									ref logic[31:0] stage,
+									ref logic[7:0] reg_writedata1, reg_writedata2,
+									ref logic reg_WE1, reg_WE2,
+									ref logic[3:0] reg_addr1, reg_addr2,
+									ref int total);
+									
+	repeat(4) @(posedge clk);
+	instruction[15:12] = 4'hE;
+	instruction[11:8] = 4'h2;
+	instruction[7:4] = 4'h9;
+	instruction[3:0] = 4'hE;
+	
+	repeat(2) @(posedge clk);
+	stage = stage + 1;
+	reg_readdata1 = 8'hc;
+	key_pressed = 1'h0;
+	key_press = 4'hc;
+	repeat(2) @(posedge clk);
+	stage = stage + 1;
+	repeat(2) @(posedge clk);
+		assert (pc_src == PC_SRC_NEXT) begin
+			$display ("Ex9E part 3 TEST : PASSED");
+			total = total + 1;
+		end
+		else $error("Ex9E part 3 TEST : FAILED (Got %h, Expected next)", pc_src);
+	
+	testreset(instruction, stage, reg_readdata1, reg_readdata2);
+endtask
+
+//test ExA1, which skips the next instruction if Vx != key pressed
+task automatic testExA1_part1(ref logic clk,
+									ref logic key_pressed,
+									ref logic[3:0] key_press,
+									ref PC_SRC pc_src,
+									ref logic[15:0] instruction,
+									ref logic[7:0] reg_readdata1, reg_readdata2,
+									ref logic[31:0] stage,
+									ref logic[7:0] reg_writedata1, reg_writedata2,
+									ref logic reg_WE1, reg_WE2,
+									ref logic[3:0] reg_addr1, reg_addr2,
+									ref int total);
+									
+	repeat(4) @(posedge clk);
+	instruction[15:12] = 4'hE;
+	instruction[11:8] = 4'h2;
+	instruction[7:4] = 4'hA;
+	instruction[3:0] = 4'h1;
+	
+	repeat(2) @(posedge clk);
+	stage = stage + 1;
+	reg_readdata1 = 8'hd;
+	key_pressed = 1'h1;
+	key_press = 4'he;
+	repeat(2) @(posedge clk);
+	stage = stage + 1;
+	repeat(2) @(posedge clk);
+		assert (pc_src == PC_SRC_SKIP) begin
+			$display ("ExA1 part 1 TEST : PASSED");
+			total = total + 1;
+		end
+		else $error("ExA1 part 1 TEST : FAILED (Got %h, Expected skip)", pc_src);
+	
+	testreset(instruction, stage, reg_readdata1, reg_readdata2);
+endtask
+
+//test ExA1, which skips the next instruction if Vx != key pressed (testing Vx = key)
+task automatic testExA1_part2(ref logic clk,
+									ref logic key_pressed,
+									ref logic[3:0] key_press,
+									ref PC_SRC pc_src,
+									ref logic[15:0] instruction,
+									ref logic[7:0] reg_readdata1, reg_readdata2,
+									ref logic[31:0] stage,
+									ref logic[7:0] reg_writedata1, reg_writedata2,
+									ref logic reg_WE1, reg_WE2,
+									ref logic[3:0] reg_addr1, reg_addr2,
+									ref int total);
+									
+	repeat(4) @(posedge clk);
+	instruction[15:12] = 4'hE;
+	instruction[11:8] = 4'h2;
+	instruction[7:4] = 4'hA;
+	instruction[3:0] = 4'h1;
+	
+	repeat(2) @(posedge clk);
+	stage = stage + 1;
+	reg_readdata1 = 8'h7;
+	key_pressed = 1'h1;
+	key_press = 4'h7;
+	repeat(2) @(posedge clk);
+	stage = stage + 1;
+	repeat(2) @(posedge clk);
+		assert (pc_src == PC_SRC_NEXT) begin
+			$display ("ExA1 part 2 TEST : PASSED");
+			total = total + 1;
+		end
+		else $error("ExA1 part 2 TEST : FAILED (Got %h, Expected next)", pc_src);
+	
+	testreset(instruction, stage, reg_readdata1, reg_readdata2);
+endtask
+
+//test ExA1, which skips the next instruction if Vx != key pressed (testing no key pressed)
+task automatic testExA1_part3(ref logic clk,
+									ref logic key_pressed,
+									ref logic[3:0] key_press,
+									ref PC_SRC pc_src,
+									ref logic[15:0] instruction,
+									ref logic[7:0] reg_readdata1, reg_readdata2,
+									ref logic[31:0] stage,
+									ref logic[7:0] reg_writedata1, reg_writedata2,
+									ref logic reg_WE1, reg_WE2,
+									ref logic[3:0] reg_addr1, reg_addr2,
+									ref int total);
+									
+	repeat(4) @(posedge clk);
+	instruction[15:12] = 4'hE;
+	instruction[11:8] = 4'h2;
+	instruction[7:4] = 4'hA;
+	instruction[3:0] = 4'h1;
+	
+	repeat(2) @(posedge clk);
+	stage = stage + 1;
+	reg_readdata1 = 8'hc;
+	key_pressed = 1'h0;
+	key_press = 4'hc;
+	repeat(2) @(posedge clk);
+	stage = stage + 1;
+	repeat(2) @(posedge clk);
+		assert (pc_src == PC_SRC_SKIP) begin
+			$display ("ExA1 part 3 TEST : PASSED");
+			total = total + 1;
+		end
+		else $error("ExA1 part 3 TEST : FAILED (Got %h, Expected skip)", pc_src);
+	
+	testreset(instruction, stage, reg_readdata1, reg_readdata2);
+endtask
+
 module cpu_testbench();
 	logic cpu_clk;
 	logic[15:0] instruction;
@@ -508,7 +984,8 @@ module cpu_testbench();
 	logic [5:0]	fb_addr_x;//max val = 63
 	logic		fb_writedata, //data to write to addresse.
 							fb_WE, //enable writing to address
-							fbreset;
+							fbreset,
+							bit_overwritten;
 	logic halt_for_keypress;
 	
 	int total;
@@ -538,6 +1015,18 @@ module cpu_testbench();
 	
 	initial begin
 		$display("Starting test script...");
+		test3xkk_part1(cpu_clk, pc_src, instruction, reg_readdata1, reg_readdata2, stage, 
+			reg_writedata1, reg_writedata2, reg_WE1, reg_WE2, reg_addr1, reg_addr2, total);
+		test3xkk_part2(cpu_clk, pc_src, instruction, reg_readdata1, reg_readdata2, stage, 
+			reg_writedata1, reg_writedata2, reg_WE1, reg_WE2, reg_addr1, reg_addr2, total);
+		test4xkk_part1(cpu_clk, pc_src, instruction, reg_readdata1, reg_readdata2, stage, 
+			reg_writedata1, reg_writedata2, reg_WE1, reg_WE2, reg_addr1, reg_addr2, total);
+		test4xkk_part2(cpu_clk, pc_src, instruction, reg_readdata1, reg_readdata2, stage, 
+			reg_writedata1, reg_writedata2, reg_WE1, reg_WE2, reg_addr1, reg_addr2, total);
+		test5xy0_part1(cpu_clk, pc_src, instruction, reg_readdata1, reg_readdata2, stage, 
+			reg_writedata1, reg_writedata2, reg_WE1, reg_WE2, reg_addr1, reg_addr2, total);
+		test5xy0_part2(cpu_clk, pc_src, instruction, reg_readdata1, reg_readdata2, stage, 
+			reg_writedata1, reg_writedata2, reg_WE1, reg_WE2, reg_addr1, reg_addr2, total);
 		test8xy0(cpu_clk, instruction, reg_readdata1, reg_readdata2, stage, 
 			reg_writedata1, reg_writedata2, reg_WE1, reg_WE2, reg_addr1, reg_addr2, total);
 		test8xy1(cpu_clk, instruction, reg_readdata1, reg_readdata2, stage, 
@@ -566,6 +1055,30 @@ module cpu_testbench();
 			reg_writedata1, reg_writedata2, reg_WE1, reg_WE2, reg_addr1, reg_addr2, total);
 		test8xyE_part2(cpu_clk, instruction, reg_readdata1, reg_readdata2, stage, 
 			reg_writedata1, reg_writedata2, reg_WE1, reg_WE2, reg_addr1, reg_addr2, total);
+		test9xy0_part1(cpu_clk, pc_src, instruction, reg_readdata1, reg_readdata2, stage, 
+			reg_writedata1, reg_writedata2, reg_WE1, reg_WE2, reg_addr1, reg_addr2, total);
+		test9xy0_part2(cpu_clk, pc_src, instruction, reg_readdata1, reg_readdata2, stage, 
+			reg_writedata1, reg_writedata2, reg_WE1, reg_WE2, reg_addr1, reg_addr2, total);
+		testEx9E_part1(cpu_clk, key_pressed, key_press, pc_src, instruction, reg_readdata1, 
+			reg_readdata2, stage, reg_writedata1, reg_writedata2, reg_WE1, reg_WE2, reg_addr1, 
+			reg_addr2, total);
+		testEx9E_part2(cpu_clk, key_pressed, key_press, pc_src, instruction, reg_readdata1, 
+			reg_readdata2, stage, reg_writedata1, reg_writedata2, reg_WE1, reg_WE2, reg_addr1, 
+			reg_addr2, total);
+		testEx9E_part3(cpu_clk, key_pressed, key_press, pc_src, instruction, reg_readdata1, 
+			reg_readdata2, stage, reg_writedata1, reg_writedata2, reg_WE1, reg_WE2, reg_addr1, 
+			reg_addr2, total);
+		testExA1_part1(cpu_clk, key_pressed, key_press, pc_src, instruction, reg_readdata1, 
+			reg_readdata2, stage, reg_writedata1, reg_writedata2, reg_WE1, reg_WE2, reg_addr1, 
+			reg_addr2, total);
+		testExA1_part2(cpu_clk, key_pressed, key_press, pc_src, instruction, reg_readdata1, 
+			reg_readdata2, stage, reg_writedata1, reg_writedata2, reg_WE1, reg_WE2, reg_addr1, 
+			reg_addr2, total);
+		testExA1_part3(cpu_clk, key_pressed, key_press, pc_src, instruction, reg_readdata1, 
+			reg_readdata2, stage, reg_writedata1, reg_writedata2, reg_WE1, reg_WE2, reg_addr1, 
+			reg_addr2, total);
+			
+		$display("TESTS PASSED : %d", total);
 	end
 	
 endmodule 
