@@ -12,7 +12,7 @@
    element $${FILENAME}
    {
    }
-   element chip8dev_1
+   element chip8dev_0
    {
       datum _sortIndex
       {
@@ -66,7 +66,11 @@
  <interface name="reset" internal="clk_0.clk_in_reset" type="reset" dir="end" />
  <interface name="memory" internal="hps_0.memory" type="conduit" dir="end" />
  <interface name="hps_io" internal="hps_0.hps_io" type="conduit" dir="end" />
- <interface name="vga" internal="chip8dev_1.conduit_end" type="conduit" dir="end" />
+ <interface
+   name="chip8_device"
+   internal="chip8dev_0.conduit_end"
+   type="conduit"
+   dir="end" />
  <module kind="clock_source" version="13.1" enabled="1" name="clk_0">
   <parameter name="clockFrequency" value="50000000" />
   <parameter name="clockFrequencyKnown" value="true" />
@@ -533,9 +537,6 @@
   <parameter name="quartus_ini_hps_ip_enable_bsel_csel" value="false" />
   <parameter name="quartus_ini_hps_ip_f2sdram_bonding_out" value="false" />
  </module>
- <module kind="chip8dev" version="1.1" enabled="1" name="chip8dev_1">
-  <parameter name="AUTO_CLOCK_CLOCK_RATE" value="50000000" />
- </module>
  <module
    kind="altera_jtag_avalon_master"
    version="13.1"
@@ -549,6 +550,7 @@
   <parameter name="AUTO_DEVICE_FAMILY" value="Cyclone V" />
   <parameter name="AUTO_DEVICE" value="5CSXFC6D6F31C8ES" />
  </module>
+ <module kind="chip8dev" version="1.0" enabled="1" name="chip8dev_0" />
  <connection
    kind="clock"
    version="13.1"
@@ -564,21 +566,6 @@
    version="13.1"
    start="clk_0.clk"
    end="hps_0.h2f_lw_axi_clock" />
- <connection kind="clock" version="13.1" start="clk_0.clk" end="chip8dev_1.clock" />
- <connection
-   kind="avalon"
-   version="13.1"
-   start="hps_0.h2f_lw_axi_master"
-   end="chip8dev_1.avalon_slave_0">
-  <parameter name="arbitrationPriority" value="1" />
-  <parameter name="baseAddress" value="0x0000" />
-  <parameter name="defaultConnection" value="false" />
- </connection>
- <connection
-   kind="reset"
-   version="13.1"
-   start="clk_0.clk_reset"
-   end="chip8dev_1.reset_sink" />
  <connection kind="clock" version="13.1" start="clk_0.clk" end="master_0.clk" />
  <connection
    kind="reset"
@@ -586,10 +573,25 @@
    start="clk_0.clk_reset"
    end="master_0.clk_reset" />
  <connection
+   kind="reset"
+   version="13.1"
+   start="clk_0.clk_reset"
+   end="chip8dev_0.reset_sink" />
+ <connection kind="clock" version="13.1" start="clk_0.clk" end="chip8dev_0.clock" />
+ <connection
+   kind="avalon"
+   version="13.1"
+   start="hps_0.h2f_lw_axi_master"
+   end="chip8dev_0.avalon_slave_0">
+  <parameter name="arbitrationPriority" value="1" />
+  <parameter name="baseAddress" value="0x0000" />
+  <parameter name="defaultConnection" value="false" />
+ </connection>
+ <connection
    kind="avalon"
    version="13.1"
    start="master_0.master"
-   end="chip8dev_1.avalon_slave_0">
+   end="chip8dev_0.avalon_slave_0">
   <parameter name="arbitrationPriority" value="1" />
   <parameter name="baseAddress" value="0x0000" />
   <parameter name="defaultConnection" value="false" />

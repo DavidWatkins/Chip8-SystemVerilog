@@ -78,7 +78,6 @@ int readFramebuffer(int x, int y) {
 	chip8_opcode op;
 	op.addr = FRAMEBUFFER_ADDR;
 	op.data = (0 << 12) | (0 << 11) | ((x & 0x3f) << 5) | (y & 0x1f);
-	chip8_write(&op);
 	chip8_read(&op);
 	return op.readdata;
 }
@@ -94,9 +93,8 @@ int readMemory(int address) {
 	chip8_opcode op;
 	op.addr = MEMORY_ADDR;
 	op.data = (0 << 20) | ((address & 0xfff) << 8) | (0 & 0xff);
-	chip8_write(&op);	
 	chip8_read(&op);
-	return op.readdata;
+	return (op.readdata & 0xff);
 }
 
 /*
@@ -109,6 +107,10 @@ void loadfontset() {
 		setMemory(i, CHIP8_FONTSET[i]);
 		// int mem_val = readMemory(i);
 		// printf("(Address: %d) Wrote: %d, Read: %d\n", i, CHIP8_FONTSET[i], mem_val);
+		int got = readMemory(i);
+		if (CHIP8_FONTSET[i] != got) {
+			printf("Memory mismatch (expected: %d, got: %d)\n", CHIP8_FONTSET[i], got);
+		} 
 	}
 }
 
@@ -144,9 +146,16 @@ void loadROM(const char* romfilename) {
 		fread((&buffer), 1, 1, romfile); 
 
 		setMemory(MEMORY_START + i, buffer);
+		int got = readMemory(MEMORY_START + i);
+		if (buffer != got) {
+			printf("Memory mismatch (expected: %d, got: %d)\n", buffer, got);
+		} else {
+			printf("%d ", got);
+		}
 	}
 
 	fclose(romfile); // Close the file
+	printf("\n");
 }
 
 void startChip8() {
@@ -165,23 +174,86 @@ void pauseChip8() {
 	chip8_write(&op);
 }
 
-void resetChip8() {
+int chip8isRunning() {
+	chip8_opcode op;
+	op.addr = STATE_ADDR;
+	chip8_read(&op);
+	return op.readdata == RUNNING_STATE;
+}
+
+int chip8isPaused() {
+	chip8_opcode op;
+	op.addr = STATE_ADDR;
+	chip8_read(&op);
+	return op.readdata == PAUSED_STATE;
+}
+
+int readPC() {
+	chip8_opcode op;
+	op.addr = PROGRAM_COUNTER_ADDR;
+	chip8_read(&op);
+	return op.readdata;
+}
+
+void writePC(int pc) {
+	chip8_opcode op;
+	op.addr = PROGRAM_COUNTER_ADDR;
+	op.data = pc;
+	chip8_write(&op);
+}
+
+void printMemory() {
+	int i = 0;
+	for(i = 0; i < MEMORY_END; ++i) {
+		printf("%d ", readMemory(i));
+	}
+	printf("\n");
+}
+
+void resetChip8(const char* filename) {
 	//Need to write to registers and all
 	//Reload font set etc.
+	pauseChip8();
+	loadfontset();
+	loadROM(filename);
+
+	printMemory();
+}
+
+int readSoundTimer() {
+	chip8_opcode op;
+	op.addr = SOUND_TIMER_ADDR;
+	chip8_read(&op);
+	return op.readdata;
+}
+
+void writeSoundTimer() {
+	chip8_opcode op;
+	op.addr = SOUND_TIMER_ADDR;
+	op.data = 0;
+	chip8_write(&op);
 }
 
 void chip8writekeypress(char val, unsigned int ispressed) {
 	chip8_opcode op;
 	op.addr = KEY_PRESS_ADDR;
-	op.data = (ispressed << 4) | val;
+	op.data = ((ispressed & 0x1) << 4) | (val & 0xf);
 	chip8_write(&op);
+}
+
+void printKeyState() {
+	chip8_opcode op;
+	op.addr = KEY_PRESS_ADDR;
+	chip8_read(&op);
+
+	printf("Is pressed: %d, Key val: %d, raw value: %d\n", (op.readdata & 0x10) >> 4, (op.readdata & 0xf), op.readdata);
 }
 
 /*
 * Checks to see if a key is pressed, or depressed
 * Then writes the associated action to the chip8 device
 */
-void checkforkeypress() {
+void checkforkeypress(const char *file) {
 	struct usb_keyboard_packet packet;
 	int transferred;
 	char keystate[12];
@@ -191,34 +263,19 @@ void checkforkeypress() {
 		sprintf(keystate, "%02x %02x %02x", packet.modifiers, packet.keycode[0], packet.keycode[1]);
 		char val[1];
 		if (kbiskeypad(&packet, val)) {
-			printf("Key pressed %d\n", val[0]);
 			chip8writekeypress(val[0], 1);
 		} else if(kbisstart(&packet)) {
 			startChip8();
 		} else if(kbispause(&packet)) {
 			pauseChip8();
 		} else if(kbisreset(&packet)) {
-			resetChip8();
+			resetChip8(file);
 		} else {
 			chip8writekeypress(0, 0);
 		}
 	} else {
 		printf("Size mismatch %d %d\n", sizeof(packet), transferred);
 	}
-}
-
-int chip8isRunning() {
-	chip8_opcode op;
-	op.addr = STATE_ADDR;
-	chip8_read(&op);
-	return op.readdata == RUNNING_STATE;
-}
-
-int readPC() {
-	chip8_opcode op;
-	op.addr = PROGRAM_COUNTER_ADDR;
-	chip8_read(&op);
-	return op.readdata;
 }
 
 int main(int argc, char** argv)
@@ -255,12 +312,27 @@ int main(int argc, char** argv)
 	readWriteFramebuffer();
 
 	printf("Chip8 has started\n");
-	startChip8();
-	while(chip8isRunning()) {
+	// startChip8();
+	writePC(0x200);
+
+	printMemory();
+	while(chip8isRunning() || chip8isPaused()) {
+		if(chip8isPaused()) {
+			printf("Paused\n");
+		} else {
+			printf("Running\n");
+		}
 		int pc = readPC();
-		printf("Program counter is: %d\n", pc);
-		checkforkeypress();
+		int mem = readMemory(pc);
+		printf("Program counter is: %d, instruction is: %d\n", pc, mem);
+		// printf("Sound timer: %d\n", readSoundTimer());
+		// int i;
+		// for(i = 0; i < 100000; ++i) 
+		// 	writeSoundTimer();
+		// printf("Sound timer: %d\n", readSoundTimer());
+		checkforkeypress(argv[1]);
 		usleep(4000);
+		printKeyState();
 	}
 	
 	printf("Chip8 is terminating\n");

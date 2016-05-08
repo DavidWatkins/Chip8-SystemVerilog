@@ -22,7 +22,7 @@ module timer (
 		begin
 			if(write_enable) begin
 				delay_reg <= data;
-			end else if (clk_60 & !(|delay_reg)) begin
+			end else if (clk_60 & (|delay_reg)) begin
 				delay_reg <= delay_reg - 8'd1;
 			end
 			out <= |delay_reg;

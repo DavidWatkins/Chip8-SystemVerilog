@@ -9,20 +9,33 @@
 */
 
 module audio_effects (
-    input  clk, //audio clock
-    input  sample_end, //sample ends
-    input  sample_req, //request new sample
-    output [15:0] audio_output, //sends audio sample to audio codec
-    input  control    //Control from the top level Chip8 Module
+    input  audio_clk,
+    input  main_clk,
+    input  reset,
+
+    input  sample_end,
+    input  sample_req,
+
+    output [15:0] audio_output,
+    input  [15:0] audio_input,
+
+    input    control
 );
 
-
-reg [15:0] romdata [0:99];  //read only memory for samples
-reg  [15:0]  index = 7'd0;     //index through samples
-reg [15:0] last_sample;
-reg [15:0] dat;
+reg  [15:0] romdata [0:99];
+reg  [6:0]  index = 7'd0;
+reg  [15:0] last_sample;
+reg  [15:0] dat;
+wire [15:0] filter_output;
+wire filter_finish;
 
 assign audio_output = dat;
+
+parameter SINE     = 0;
+parameter FEEDBACK = 1;
+parameter FILTER   = 2;
+
+parameter SINE_LAST = 7'd99;
 
 initial begin
     romdata[0] = 16'h0000;
@@ -127,19 +140,22 @@ initial begin
     romdata[99] = 16'hf629;
 end
 
-always @(posedge clk) begin
+always @(*) begin
 
+    if (control)
+        dat <= romdata[index];
+    else
+        dat <= 16'd0;
+end
 
+always @(posedge audio_clk) begin
     if (sample_req) begin
-        if (control) begin
-            dat <= romdata[index];
-            if (index == 7'd99)
-                index <= 7'd00;
-            else
-                index <= index + 1'b1;
-        end else
-            dat <= 16'd0;
+        if (index == SINE_LAST)
+            index <= 7'd00;
+        else
+            index <= index + 1'b1;
     end
 end
+
 
 endmodule

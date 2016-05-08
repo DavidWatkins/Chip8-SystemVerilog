@@ -9,8 +9,10 @@ module i2c_av_config (
     input clk,
     input reset,
 
-    output i2c_sclk, //I2C clock
-    inout  i2c_sdat   // I2C data out
+    output i2c_sclk,
+    inout  i2c_sdat,
+
+    output [3:0] status
 );
 
 reg [23:0] i2c_data;
@@ -23,7 +25,6 @@ reg  i2c_start = 1'b0;
 wire i2c_done;
 wire i2c_ack;
 
-//Send data to I2C controller 
 i2c_controller control (
     .clk (clk),
     .i2c_sclk (i2c_sclk),
@@ -34,7 +35,6 @@ i2c_controller control (
     .ack (i2c_ack)
 );
 
-//configure various registers of audio codec ssm 2603
 always @(*) begin
     case (lut_index)
         4'h0: lut_data <= 16'h0c10; // power on everything except out
@@ -45,7 +45,7 @@ always @(*) begin
         4'h5: lut_data <= 16'h08d4; // analog path
         4'h6: lut_data <= 16'h0a04; // digital path
         4'h7: lut_data <= 16'h0e01; // digital IF
-        4'h8: lut_data <= 16'h1034; // sampling rate
+        4'h8: lut_data <= 16'h1020; // sampling rate
         4'h9: lut_data <= 16'h0c00; // power on everything
         4'ha: lut_data <= 16'h1201; // activate
         default: lut_data <= 16'h0000;
@@ -53,6 +53,8 @@ always @(*) begin
 end
 
 reg [1:0] control_state = 2'b00;
+
+assign status = lut_index;
 
 always @(posedge clk) begin
     if (reset) begin
@@ -86,3 +88,4 @@ always @(posedge clk) begin
 end
 
 endmodule
+

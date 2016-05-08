@@ -10,7 +10,7 @@ module i2c_av_config (
     input reset,
 
     output i2c_sclk, //I2C clock
-    inout  i2c_sdat,   // I2C data out
+    inout i2c_sdat,   // I2C data out
 
     output [3:0] status
 );

@@ -1,30 +1,20 @@
-
-//Original audio codec code taken from
-//Howard Mao's FPGA blog
-//http://zhehaomao.com/blog/fpga/2014/01/15/sockit-8.html
-//MOdified as needed
-
-/* audio_effects.sv
-    Sends hardcoded beep samples to audio codec interface
-*/
-
 module audio_effects (
-    input  clk, //audio clock
-    input  sample_end, //sample ends
-    input  sample_req, //request new sample
-    output [15:0] audio_output, //sends audio sample to audio codec
-    input  [1:0] control    //Control from avalon bus
+    input  clk,
+    input  sample_end,
+    input  sample_req,
+    output [15:0] audio_output,
+    input  [15:0] audio_input,
+    input  [3:0]  control
 );
 
-
-reg [15:0] romdata [0:99];  //read only memory for samples
-reg  [15:0]  index = 7'd0;     //index through samples
+reg [15:0] romdata [0:99];
+reg [6:0]  index = 7'd0;
 reg [15:0] last_sample;
 reg [15:0] dat;
 
 assign audio_output = dat;
 
-parameter SINE = 0;
+parameter SINE     = 0;
 parameter FEEDBACK = 1;
 
 initial begin

@@ -41,6 +41,7 @@ module Chip8_framebuffer(
 	wire fb_readdata_general;
 	wire fb_readdata_vga;
 	assign fb_readdata = fb_readdata_general;
+	
 	Chip8_VGA_Emulator led_emulator(
 			.clk50(clk),
 			.reset(reset),

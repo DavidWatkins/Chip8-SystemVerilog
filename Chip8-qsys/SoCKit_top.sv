@@ -655,24 +655,24 @@ module SoCKit_top(
             .hps_io_hps_io_uart0_inst_TX     		  (hps_io_hps_io_uart0_inst_TX),     //                .hps_io_uart0_inst_TX
             .hps_io_hps_io_i2c1_inst_SDA     		  (hps_io_hps_io_i2c1_inst_SDA),     //                .hps_io_i2c1_inst_SDA
             .hps_io_hps_io_i2c1_inst_SCL     		  (hps_io_hps_io_i2c1_inst_SCL),      //                .hps_io_i2c1_inst_SCL
-			.vga_R 							 		  (VGA_R),
-			.vga_G 							 		  (VGA_G),
-			.vga_B 							 		  (VGA_B),
-			.vga_CLK 								  (VGA_CLK),
-			.vga_HS 								  (VGA_HS),
-			.vga_VS 								  (VGA_VS),
-			.vga_BLANK_n 							  (VGA_BLANK_n),
-			.vga_SYNC_n 							  (VGA_SYNC_n),
-			.OSC_50_B8A 							  (OSC_50_B8A),
-			.AUD_ADCLRCK 							  (AUD_ADCLRCK),
-			.AUD_ADCDAT 							  (AUD_ADCDAT),
-			.AUD_DACLRCK 							  (AUD_DACLRCK),
-			.AUD_DACDAT 							  (AUD_DACDAT),
-			.AUD_XCK 								  (AUD_XCK),
-			.AUD_BCLK 							 	  (AUD_BCLK),
-			.AUD_I2C_SCLK 							  (AUD_I2C_SCLK),
-			.AUD_I2C_SDAT 							  (AUD_I2C_SDAT),
-			.AUD_MUTE 							 	  (AUD_MUTE)
+				.chip8_device_VGA_R				 		  (VGA_R),
+				.chip8_device_VGA_G				 		  (VGA_G),
+				.chip8_device_VGA_B				 		  (VGA_B),
+				.chip8_device_VGA_CLK					  (VGA_CLK),
+				.chip8_device_VGA_HS					  (VGA_HS),
+				.chip8_device_VGA_VS					  (VGA_VS),
+				.chip8_device_VGA_BLANK_n				  (VGA_BLANK_n),
+				.chip8_device_OSC_50_B8A				  (OSC_50_B8A),
+				.chip8_device_AUD_ADCDAT				  (AUD_ADCLRCK),
+				.chip8_device_AUD_DACLRCK				  (AUD_ADCDAT),
+				.chip8_device_AUD_ADCLRCK				  (AUD_DACLRCK),
+				.chip8_device_AUD_DACDAT				  (AUD_DACDAT),
+				.chip8_device_AUD_XCK				      (AUD_XCK),
+				.chip8_device_AUD_BCLK					  (AUD_BCLK),
+				.chip8_device_AUD_I2C_SCLK				  (AUD_I2C_SCLK),
+				.chip8_device_AUD_I2C_SDAT				  (AUD_I2C_SDAT),
+				.chip8_device_AUD_MUTE				      (AUD_MUTE),
+				.chip8_device_VGA_SYNC_n				  (VGA_SYNC_n)
 	    );
 
 endmodule

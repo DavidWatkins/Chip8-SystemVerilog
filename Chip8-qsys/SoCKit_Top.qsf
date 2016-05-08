@@ -38,7 +38,7 @@
 
 set_global_assignment -name FAMILY "Cyclone V"
 set_global_assignment -name DEVICE 5CSXFC6D6F31C8ES
-set_global_assignment -name TOP_LEVEL_ENTITY Chip8_Top
+set_global_assignment -name TOP_LEVEL_ENTITY SoCKit_top
 set_global_assignment -name ORIGINAL_QUARTUS_VERSION 13.1
 set_global_assignment -name PROJECT_CREATION_TIME_DATE "21:21:35  FEBRUARY 18, 2014"
 set_global_assignment -name LAST_QUARTUS_VERSION 13.1
@@ -597,7 +597,11 @@ set_instance_assignment -name GLOBAL_SIGNAL OFF -to u0|hps_0|hps_io|border|hps_s
 set_instance_assignment -name GLOBAL_SIGNAL OFF -to u0|hps_0|hps_io|border|hps_sdram_inst|p0|umemphy|uread_datapath|reset_n_fifo_wraddress[3] -tag __hps_sdram_p0
 set_instance_assignment -name ENABLE_BENEFICIAL_SKEW_OPTIMIZATION_FOR_NON_GLOBAL_CLOCKS ON -to u0|hps_0|hps_io|border|hps_sdram_inst -tag __hps_sdram_p0
 set_instance_assignment -name PLL_COMPENSATION_MODE DIRECT -to u0|hps_0|hps_io|border|hps_sdram_inst|pll0|fbout -tag __hps_sdram_p0
-set_global_assignment -name VERILOG_FILE clock_pll/clock_pll_0002.v
+set_global_assignment -name QIP_FILE Chip8/synthesis/Chip8.qip
+set_global_assignment -name SYSTEMVERILOG_FILE Chip8_Stack/Chip8_Stack.sv
+set_global_assignment -name VERILOG_FILE Chip8_Memory/stack_ram.v
+set_global_assignment -name VERILOG_FILE Chip8_Framebuffer/Framebuffer.v
+set_global_assignment -name SYSTEMVERILOG_FILE SoCKit_top.sv
 set_global_assignment -name VERILOG_FILE Chip8_Memory/memory.v
 set_global_assignment -name SYSTEMVERILOG_FILE Chip8_Top.sv
 set_global_assignment -name SYSTEMVERILOG_FILE Chip8_Timers/timer.sv
@@ -614,4 +618,6 @@ set_global_assignment -name SYSTEMVERILOG_FILE Chip8_CPU/Chip8_rand_num_generato
 set_global_assignment -name SYSTEMVERILOG_FILE Chip8_CPU/Chip8_ALU.sv
 set_global_assignment -name SYSTEMVERILOG_FILE Chip8_CPU/Chip8_CPU.sv
 set_global_assignment -name SYSTEMVERILOG_FILE Chip8_CPU/bcd.sv
+set_global_assignment -name QIP_FILE clock_pll.qip
+set_global_assignment -name SIP_FILE clock_pll.sip
 set_instance_assignment -name PARTITION_HIERARCHY root_partition -to | -section_id Top
