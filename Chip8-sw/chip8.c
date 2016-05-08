@@ -66,6 +66,38 @@ void chip8_read(chip8_opcode *op) {
 	}
 }
 
+void setFramebuffer(int x, int y, int value) {
+	chip8_opcode op;
+	op.addr = FRAMEBUFFER_ADDR;
+	op.data = (1 << 12) | ((value & 0x1) << 11) | ((x & 0x3f) << 5) | (y & 0x1f);
+	chip8_write(&op);
+}
+
+int readFramebuffer(int x, int y) {
+	chip8_opcode op;
+	op.addr = FRAMEBUFFER_ADDR;
+	op.data = (0 << 12) | (0 << 11) | ((x & 0x3f) << 5) | (y & 0x1f);
+	chip8_write(&op);
+	chip8_read(&op);
+	return op.readdata;
+}
+
+void setMemory(int address, int data) {
+	chip8_opcode op;
+	op.addr = MEMORY_ADDR;
+	op.data = (1 << 20) | ((address & 0xfff) << 8) | (data & 0xff);
+	chip8_write(&op);	
+}
+
+int readMemory(int address) {
+	chip8_opcode op;
+	op.addr = MEMORY_ADDR;
+	op.data = (0 << 20) | ((address & 0xfff) << 8) | (0 & 0xff);
+	chip8_write(&op);	
+	chip8_read(&op);
+	return op.readdata;
+}
+
 /*
 * Load the font set onto the chip8 sequentially
 * Uses the op codes specified in chip8driver.h
@@ -73,13 +105,22 @@ void chip8_read(chip8_opcode *op) {
 void loadfontset() {
 	int i;
 	for(i = 0; i < FONTSET_LENGTH; ++i) {
-		chip8_opcode op;
-		op.addr = MEMORY_ADDR | i;
-		op.data = CHIP8_FONTSET[i];
+		setMemory(i, CHIP8_FONTSET[i]);
+		int mem_val = readMemory(i);
+		// printf("(Address: %d) Wrote: %d, Read: %d\n", i, CHIP8_FONTSET[i], mem_val);
+	}
+}
 
-		chip8_write(&op);
-		// chip8_read(&op);
-		// printf("Read: %d\n", op.readdata);
+void readWriteFramebuffer() {
+	int x, y;
+	for(x = 0; x < 64; ++x) {
+		for(y = 0; y < 32; ++y) {
+
+			int mem_val = readFramebuffer(x, y);
+			setFramebuffer(x, y, !mem_val);
+
+			// printf("(x: %d, y: %d) Wrote: %d, Read: %d\n", x, y, !mem_val, mem_val);
+		}
 	}
 }
 
@@ -101,11 +142,7 @@ void loadROM(const char* romfilename) {
 	for(i = 0; i < filelen && i < MEMORY_END - MEMORY_START; i++) {
 		fread((&buffer), 1, 1, romfile); 
 
-		chip8_opcode op;
-		op.addr = MEMORY_ADDR | (MEMORY_START + i);
-		op.data = buffer;
-
-		chip8_write(&op);
+		setMemory(MEMORY_START + i, buffer);
 	}
 
 	fclose(romfile); // Close the file
@@ -167,7 +204,10 @@ void checkforkeypress() {
 }
 
 int chip8isRunning() {
-	return 1;
+	chip8_opcode op;
+	op.addr = STATE_ADDR;
+	chip8_read(&op);
+	return op.readdata == RUNNING_STATE;
 }
 
 int main(int argc, char** argv)
@@ -184,7 +224,7 @@ int main(int argc, char** argv)
 	}
 
 	chip8_opcode op;
-	static const char filename[] = "/dev/chip8";
+	static const char filename[] = "/dev/vga_led";
 	if ( (chip8_fd = open(filename, O_RDWR)) == -1) {
 		fprintf(stderr, "could not open %s\n", filename);
 		return -1;
@@ -200,6 +240,9 @@ int main(int argc, char** argv)
 
 	printf("Loading ROM %s\n", argv[1]);
 	loadROM(argv[1]);
+
+	printf("Flipping framebuffer\n");
+	readWriteFramebuffer();
 
 	printf("Chip8 has started\n");
 	startChip8();

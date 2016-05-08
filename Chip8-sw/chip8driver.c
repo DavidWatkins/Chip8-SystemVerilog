@@ -33,7 +33,7 @@
 #include <linux/uaccess.h>
 #include "chip8driver.h"
 
-#define DRIVER_NAME "chip8"
+#define DRIVER_NAME "vga_led"
 
 /*
  * Information about our device
@@ -56,7 +56,6 @@ static void write_op(unsigned int addr, unsigned int instruction) {
 static int read_value(unsigned int addr) {
 	return ioread32(dev.virtbase + addr);
 }
-
 
 /*
 * Checks to see if the address is validly formatted
@@ -91,6 +90,21 @@ static int isValidInstruction(unsigned int addr, unsigned int instruction, int i
 		case STACK_POINTER_ADDR: return !isWrite || (instruction >= 0 && instruction < 64);
 		case STACK_ADDR: 		 return 1;
 
+		//Handle state transition
+		case STATE_ADDR: switch(instruction) {
+			case RUNNING_STATE: return 1;
+			case LOADING_ROM_STATE: return 1;
+			case LOADING_FONT_SET_STATE: return 1;
+			case PAUSED_STATE: return 1;
+			default: return 0;
+		} 
+
+		//Memory address
+		case MEMORY_ADDR: 
+		//0000_0000_0001_AAAA_AAAA_AAAA_DDDD_DDDD
+		if(isWrite) return 1;
+		else return 2;
+
 		//Program Counter will always look at the last 3 nibbles
 		case PROGRAM_COUNTER_ADDR: return 1;
 
@@ -100,12 +114,15 @@ static int isValidInstruction(unsigned int addr, unsigned int instruction, int i
 		//Make sure X, Y, and data values conform
 		//Data value will always be 1 byte
 		case FRAMEBUFFER_ADDR: 
-			return ((instruction & 0xFF0000) >> 16) < MAX_FBX &&
-				   ((instruction & 0x00FF00) >> 8 ) < MAX_FBY;
+		//0000_0000_0000_0000_0001_DXXX_XXXY_YYYY
+		if(isWrite) return 1;
+		else 		return 2;
+
+
 		default: break;
 	}
 
-	return (addr & MEMORY_ADDR);
+	return 0;
 }
 
 
@@ -117,6 +134,7 @@ static int isValidInstruction(unsigned int addr, unsigned int instruction, int i
 static long chip8_ioctl(struct file *f, unsigned int cmd, unsigned long arg)
 {
 	chip8_opcode op;
+	int isWrite = 0;
 
 	switch (cmd) {
 	case CHIP8_WRITE_ATTR:
@@ -130,9 +148,14 @@ static long chip8_ioctl(struct file *f, unsigned int cmd, unsigned long arg)
 	case CHIP8_READ_ATTR:
 		if (copy_from_user(&op, (chip8_opcode *) arg, sizeof(chip8_opcode)))
 			return -EACCES;
-		if (!!isValidInstruction(op.addr, op.data, 0))
+		isWrite = isValidInstruction(op.addr, op.data, 0);
+		if(isWrite == 0)
 			return -EINVAL;
 
+
+		if(isWrite == 2)
+			write_op(op.addr, op.data);
+		
 		op.readdata = read_value(op.addr);
 		if (copy_to_user((chip8_opcode *) arg, &op, sizeof(chip8_opcode)))
 			return -EACCES;
@@ -213,7 +236,7 @@ static int chip8_remove(struct platform_device *pdev)
 /* Which "compatible" string(s) to search for in the Device Tree */
 #ifdef CONFIG_OF
 static const struct of_device_id chip8_of_match[] = {
-	{ .compatible = "altr,chip8" },
+	{ .compatible = "altr,vga_led" },
 	{},
 };
 MODULE_DEVICE_TABLE(of, chip8_of_match);
