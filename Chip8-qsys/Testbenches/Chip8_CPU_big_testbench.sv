@@ -1,3 +1,16 @@
+/**
+ * Author: Levi Oliver
+ * This code tests instructions 
+ * 00e0 -- clear screen
+ * 6xkk -- load kk into Vx
+ * 7xkk -- sets Vx = Vx + kk
+ * Dxyn -- draws sprite! see instruction description in Chip8_CPU.sv
+ * Fx29 -- sets I to memory address of sprite representing value in Vx
+ * Fx33 -- stores BCD value for Vx in memory at I/I+1/I+2 :: h/t/o
+ */
+
+
+
 `timescale 1ns/100ps
 
 `include "../enums.svh"
@@ -63,7 +76,87 @@ task automatic test_resets(ref logic cpu_clk, ref logic[31:0] stage, ref int tot
 
 endtask
 
+task automatic testFx33(ref logic cpu_clk, 
+					ref logic[15:0] instruction,
+					ref logic[31:0] stage,
+					ref int 			 total, failed,
+					ref logic[ 3:0] reg_addr1,
+					ref logic[ 7:0] reg_readdata1,
+					ref logic[11:0] mem_addr1,
+					ref logic[ 7:0] mem_writedata1,
+					ref logic 		 mem_WE1,
+					ref logic[15:0] reg_I_readdata);
+	
+	instruction = 16'hFe33;
+	stage = 32'b0;
+	
+	wait(stage == 32'h2);#1ns;
+	assert(reg_addr1==instruction[11:8]);
+	
+	reg_readdata1 = 8'd195;//1100 0011
+	reg_I_readdata = 16'h03F2;
+	
+	wait(stage == 32'h3);#1ns;
+	assert(reg_addr1==instruction[11:8]  &  mem_addr1==reg_I_readdata[11:0] &
+				mem_addr1==reg_I_readdata[11:0] & mem_writedata1==8'd1& mem_WE1)
+	else begin
+		$display("Improper BCD conversion. \n\tGiven value: %d\n\tCalculated hundreds place: %d",reg_readdata1, mem_writedata1);
+	end
+	
+	
+	wait(stage == 32'h4);#1ns;
+	assert(reg_addr1==instruction[11:8]  &  mem_addr1==(1+reg_I_readdata[11:0]) & mem_writedata1==8'd9 & mem_WE1)
+	else begin
+		$display("Improper BCD conversion. \n\tGiven value: %d\n\tCalculated tens place: %d",reg_readdata1, mem_writedata1);
+	end
+	
+	wait(stage == 32'h5);#1ns;
+	assert(mem_addr1==(2+reg_I_readdata[11:0]) & mem_writedata1==8'd5 & mem_WE1) begin
+		total = total + 1;
+		$display("Instruction Fx33 (store Vx as BCD in I/+1/+2 in mem) is a success.");
+	end else begin
+		$display("Improper BCD conversion. \n\tGiven value: %d\n\tCalculated ones place: %d",reg_readdata1, mem_writedata1);
+	end
+	
+	wait(stage == 32'h6); #1ns;
+endtask	
 
+task automatic testFx29(ref logic cpu_clk, 
+					ref logic[15:0] instruction,
+					ref logic[31:0] stage,
+					ref int 			 total, failed,
+					ref logic[ 3:0] reg_addr1,
+					ref logic[ 7:0] reg_readdata1,
+					ref logic[15:0] reg_I_writedata,
+					ref logic		 reg_I_WE);
+	
+	
+	stage = 32'b0;
+	instruction = 16'hFC29;
+	
+	wait(stage == 32'h2);#1ns;
+	assert(reg_addr1==instruction[11:8])
+	else begin
+		failed = failed + 1;
+		$display("FX29 FAILED IN STAGE 2.");
+	end
+	
+	reg_readdata1 = 8'h0E;
+	
+	wait(stage == 32'h3);#1ns;
+	assert(reg_I_writedata == 16'd70  &  reg_I_WE == 1'b1) begin
+		$display("Fx29 (set I to Font by Vx) works!");
+		total = total + 1;
+	end else begin
+		$display("Fx29 failed in stage 3");
+	end
+	
+	wait(stage == 32'h4); #1ns;
+					
+					
+endtask
+				
+				
 task automatic testDxyn(ref logic cpu_clk, 
 					ref logic[15:0] instruction,
 					ref logic[31:0] stage,
@@ -299,6 +392,53 @@ task automatic test6xkk(ref logic cpu_clk,
 								
 endtask
 
+
+task automatic test00E0(ref logic cpu_clk, 
+					ref logic[15:0] instruction,
+					ref logic[31:0] stage,
+					ref int total, failed,
+					ref logic fb_WE, fb_writedata, fbreset,
+					ref logic[5:0] fb_addr_x,
+					ref logic[4:0] fb_addr_y);
+	
+	stage = 32'h0;
+	instruction = 16'h00e0;
+	
+	wait(stage == 32'h2); #1ns;
+	assert(fbreset == 1'b1)
+	else begin
+		failed = failed + 1;
+		$display("INSTR 00E0: fbreset NEVER SET HIGH.");
+	end
+	
+	wait(stage == 32'h3); #1ns;
+	assert(fb_WE==1'b1  &  fb_writedata==1'b0  &  fb_addr_x==0  &  fb_addr_y==0  &  fbreset==1'b0)
+	else begin
+			failed = failed + 1;
+			$display("INSTR 00E0: Did not start clearing at (x,y)=(0, 0). stage: %h", stage);
+	end
+	if(stage > 32'h2 & stage < 32'd28189  &  fbreset==1'b0) begin
+		assert(fb_WE==1'b1  &  fb_writedata==1'b0)
+		else begin
+			failed = failed + 1;
+			$display("INSTR 00E0: failed in stage: %h", stage);
+		end
+		
+		wait(stage==32'd8188);#1ns;
+		assert(fb_WE==1'b1  &  fb_writedata==1'b0 & (&fb_addr_x) & (&fb_addr_y)  &  fbreset==1'b0) begin
+			$display("00e0 clear screen success!");
+			total = total + 1;
+		end else begin
+			failed = failed + 1;
+			$display("INSTR 00E0: x and y addresses of clear never reach 63x31\n\tx=%h\n\ty=%h\stage=%d=%b",fb_addr_x,fb_addr_y,stage,stage);
+		end
+		
+	end
+		
+	wait(stage == 32'd8189); #1ns;
+					
+endtask
+					
 module Chip8_CPU_big_testbench( ) ;
 	
 	logic cpu_clk;
@@ -402,7 +542,33 @@ module Chip8_CPU_big_testbench( ) ;
 			reg_I_WE,reg_I_writedata,sp_push, sp_pop,fb_addr_y,fb_addr_x,
 			fb_writedata,fb_WE, fbreset,halt_for_keypress);	
 		
+		test00E0(cpu_clk, instruction,stage,total,failed,fb_WE, fb_writedata,fbreset,fb_addr_x,fb_addr_y);
 			
+		test_resets(cpu_clk, stage, total,failed,delay_timer_WE, sound_timer_WE,
+			delay_timer_writedata, sound_timer_writedata, /*PC_SRC pc_src,*/
+			PC_writedata,reg_WE1, reg_WE2,reg_addr1, reg_addr2,reg_writedata1, reg_writedata2,
+			mem_WE1, mem_WE2, mem_addr1, mem_addr2,mem_writedata1, mem_writedata2,
+			reg_I_WE,reg_I_writedata,sp_push, sp_pop,fb_addr_y,fb_addr_x,
+			fb_writedata,fb_WE, fbreset,halt_for_keypress);	
+		
+		testFx29( cpu_clk,instruction,stage,total,failed,reg_addr1,reg_readdata1,reg_I_writedata,reg_I_WE);	
+
+		test_resets(cpu_clk, stage, total,failed,delay_timer_WE, sound_timer_WE,
+			delay_timer_writedata, sound_timer_writedata, /*PC_SRC pc_src,*/
+			PC_writedata,reg_WE1, reg_WE2,reg_addr1, reg_addr2,reg_writedata1, reg_writedata2,
+			mem_WE1, mem_WE2, mem_addr1, mem_addr2,mem_writedata1, mem_writedata2,
+			reg_I_WE,reg_I_writedata,sp_push, sp_pop,fb_addr_y,fb_addr_x,
+			fb_writedata,fb_WE, fbreset,halt_for_keypress);	
+		
+		testFx33(cpu_clk,instruction,stage,total, failed,reg_addr1,reg_readdata1,mem_addr1,mem_writedata1,mem_WE1, reg_I_readdata);
+		
+		test_resets(cpu_clk, stage, total,failed,delay_timer_WE, sound_timer_WE,
+			delay_timer_writedata, sound_timer_writedata, /*PC_SRC pc_src,*/
+			PC_writedata,reg_WE1, reg_WE2,reg_addr1, reg_addr2,reg_writedata1, reg_writedata2,
+			mem_WE1, mem_WE2, mem_addr1, mem_addr2,mem_writedata1, mem_writedata2,
+			reg_I_WE,reg_I_writedata,sp_push, sp_pop,fb_addr_y,fb_addr_x,
+			fb_writedata,fb_WE, fbreset,halt_for_keypress);	
+		
 		$display("Total number of tests passed: %d", total);
 		$display("Total number of tests failed: %d", failed);
 	end

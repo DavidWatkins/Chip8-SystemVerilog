@@ -76,8 +76,6 @@ module Chip8_CPU(
 	ALU_f alu_cmd;
 	logic alu_carry;
 	
-	wire [31:0] stage_min2 = stage - 32'd2;
-	wire [31:0] stage_min2_rshift6 = stage_min2 >> 3'd6;
 	wire[15:0] rand_num; 
 	logic[7:0] to_bcd;
 	wire[3:0] bcd_hundreds, bcd_tens, bcd_ones;
@@ -142,9 +140,9 @@ module Chip8_CPU(
 				//Clear the screen
 				if(stage == 32'h2) begin
 					fbreset = 1'b1;
-				end else if (stage > 32'h2) begin
-					fb_addr_x = stage_min2[5:0];
-					fb_addr_y = stage_min2_rshift6[4:0];
+				end else if (stage > 32'h2 & stage < 32'd8189) begin
+					fb_addr_x = stage[7:2];
+					fb_addr_y = stage[12:8];
 					fb_WE = 1'b1;
 					fb_writedata = 1'b0;
 					//CPU DONE
@@ -663,7 +661,7 @@ module Chip8_CPU(
 				if(stage == 32'h2) begin
 					reg_addr1 = instruction[11:8];
 				end else if(stage == 32'h3) begin
-					reg_I_writedata = {12'h0, reg_readdata1[3:0]} * 3'h5;
+					reg_I_writedata = {12'h0, reg_readdata1[3:0]} * 16'h5;
 					reg_I_WE = 1'b1;
 				end else begin
 					//CPU DONE
@@ -695,18 +693,17 @@ module Chip8_CPU(
 					alu_in2 = 1;
 
 					mem_addr1 = alu_out[11:0];
-					mem_writedata2 = bcd_tens;
+					mem_writedata1 = bcd_tens;
 					mem_WE1 = 1'b1;
 				end else if(stage == 32'h5) begin
 					to_bcd = reg_readdata1;
-					// reg_addr1 = instruction[11:8];
 
 					alu_cmd = ALU_f_ADD;
 					alu_in1 = reg_I_readdata;
 					alu_in2 = 2;
 
 					mem_addr1 = alu_out[11:0];
-					mem_writedata2 = bcd_ones;
+					mem_writedata1 = bcd_ones;
 					mem_WE1 = 1'b1;
 				end else begin
 					//CPU DONE
