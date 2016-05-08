@@ -67,6 +67,7 @@ module Chip8_CPU(
 	output logic		fb_writedata, //data to write to addresse.
 							fb_WE, //enable writing to address
 							fbreset,
+							bit_overwritten,
 
 	output logic halt_for_keypress
 );
@@ -75,25 +76,17 @@ module Chip8_CPU(
 	ALU_f alu_cmd;
 	logic alu_carry;
 	
-	logic [4:0]	fb_addr_y_hold;//max val = 31
-	logic [5:0]	fb_addr_x_hold;//max val = 63
-	logic [3:0] num_rows_written;
-	logic overwritten_VF_flag;
-	logic fb_read_delayed;
-	
 	wire [31:0] stage_min2 = stage - 32'd2;
 	wire [31:0] stage_min2_rshift6 = stage_min2 >> 3'd6;
 	wire[15:0] rand_num; 
 	logic[7:0] to_bcd;
 	wire[3:0] bcd_hundreds, bcd_tens, bcd_ones;
+	
+	logic[3:0] num_rows_written; //used for sprite writing
 
 	Chip8_rand_num_generator rand_num_generator(cpu_clk, rand_num);
 	bcd binary_to_dec(to_bcd, bcd_hundreds, bcd_tens, bcd_ones);
 	Chip8_ALU alu(alu_in1, alu_in2, alu_cmd, alu_out, alu_carry);
-
-	always_ff @(posedge cpu_clk) begin
-		fb_read_delayed <= fb_readdata;
-	end
 	
 	always_comb begin
 		/*DEFAULT WIRE VALUES BEGIN*/
@@ -122,10 +115,8 @@ module Chip8_CPU(
 		fb_writedata	=	1'b0;
 		fb_WE		=	1'b0;
 		fbreset 				= 1'b0;
-		fb_addr_y_hold	=	5'h0;
-		fb_addr_x_hold	=	6'h0;
 		num_rows_written	=	4'h0;
-		overwritten_VF_flag	=	1'b0;		
+		bit_overwritten = 1'b0;
 		halt_for_keypress 		= 1'b0;
 		alu_in1 				= 16'h0;
 		alu_in2 				= 16'h0;
@@ -390,7 +381,7 @@ module Chip8_CPU(
 							//If the least-significant bit of Vx is 1, then VF 
 							//is set to 1, otherwise 0. Then Vx is divided by 2.
 
-							reg_addr2 = instruction[11:8];
+							reg_addr1 = instruction[11:8];
 							reg_WE2 = 1'b1;
 							reg_writedata2 = {7'h0, reg_readdata1[0]};
 
@@ -398,7 +389,7 @@ module Chip8_CPU(
 							alu_in1 = reg_readdata1;
 							alu_in2 = 1;
 
-							reg_addr1 = 4'hF;
+							reg_addr2 = 4'hF;
 							reg_WE1 = 1'b1;
 							reg_writedata1 = alu_out[7:0];
 						end
@@ -532,36 +523,28 @@ module Chip8_CPU(
 				//2.4, Display, for more information on the Chip-8 screen and 
 				//sprites.
 				
-				/* This is for the draw_sprite_mode, which gets messy. For the first 
-				few cycles, it does nothing except set up default values (see comment
-				"loop set up"). It zeros values that need to be zeroed. It also sets
-				the memory address of the first line of the sprite to that stored in
-				the I register.
+				if(stage >= 32'h2) begin
+					reg_addr1 = instruction[11:8];
+					reg_addr2 = instruction[ 7:4];
+					
+					mem_addr1 = reg_I_readdata[11:0] + num_rows_written;
+					if(stage <= 32'h31) num_rows_written = 4'b0;
+					else num_rows_written = ((stage >> 32'h4) - 32'h1);
+					
+					fb_WE = (stage >= 32'd16) & (num_rows_written < instruction[3:0]) & (stage[0]);
+					fb_addr_x = reg_readdata1 + ({5'b0, stage[3:1]});
+					fb_addr_y = reg_readdata2 + ({4'b0, num_rows_written});
+					fb_writedata = mem_readdata1[stage[3:1]] ^ fb_readdata;
+					bit_overwritten = (mem_readdata1[stage[3:1]]) & (fb_readdata) & fb_WE;
+						//bit_overwritten goes high whenever a pixel is set from 1 to 0
+				end
 				
-				At the 15th cycle, it starts to set up for drawing
-				a sprite. Starting with the 16th cycle, we take advantage of the fact that the 
-				last 3 bytes of stage cycle from 000 to 111 and back while 
-				stage increases to huge values. 
-				
-				When the last 3 bits go from 0 to 7 (inclusive), it XORs every bit
-				referenced by the fb_write_addr_x and fb_write_addr_y with the
-				appropriate sprite values. It does this by fetching a byte from 
-				the framebuffer in one cycle and XORing it with the appropriate 
-				sprite bit in the next cycle.
-				
-				When the last 3 bits equal 7, it makes it so during next cycle, nothing
-				is drawn. The next byte in memory (in other words, the next byte of the
-				sprite) is fetched.
-				
-				Then, once again when the last 4 bits equal 15, it sets up for the next 
-				byte from memory.
-			
-				*/
-				reg_addr1 = reg_addr1;
-				reg_addr2 = reg_addr2;
+				/*
+				reg_addr1 = instruction[11:8];
+				reg_addr2 = instruction[ 7:4];
 				mem_addr1 = mem_addr1;
-				fb_addr_x_hold = fb_addr_x_hold;
-				fb_addr_y_hold = fb_addr_y_hold;
+				fb_addr_x_hold = reg_readdata1[5:0];
+				fb_addr_y_hold = reg_readdata2[4:0];
 				num_rows_written = num_rows_written;
 				overwritten_VF_flag = overwritten_VF_flag;
 				if(stage == 32'h2) begin
@@ -580,6 +563,8 @@ module Chip8_CPU(
 						reg_addr1 = 4'hF;
 						reg_WE1 = 1'b1;
 						reg_writedata1 = {7'h0, overwritten_VF_flag};
+						
+						mem_addr1 = mem_addr1;
 					end else if(stage[3:0] == 4'd15) begin
 						fb_addr_x = fb_addr_x_hold;
 						fb_addr_y = fb_addr_y_hold + num_rows_written;
@@ -598,11 +583,13 @@ module Chip8_CPU(
 							//loop maintenance after doing a row
 							mem_addr1 = mem_addr1 + 12'd1;
 							fb_WE = 1'b0;
-						end
+							num_rows_written = num_rows_written + 4'h1;
+						end 
 					end
 				end
 			end
-		
+			*/
+			end
 			16'hEx9E: begin //Ex9E - SKP Vx
 				//Skip next instruction if key with the value of Vx is pressed.
 				//Checks the keyboard, and if the key corresponding to the value 
