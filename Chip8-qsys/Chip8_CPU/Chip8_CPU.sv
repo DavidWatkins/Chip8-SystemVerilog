@@ -536,7 +536,7 @@ module Chip8_CPU(
 					else num_rows_written = stage_shifted_by4_minus1[3:0];//((stage >> 32'h4) - 32'h1);
 					
 					mem_addr1 = reg_I_readdata[11:0] + {8'b0,num_rows_written};
-					mem_request = (stage >= 32'd16) & (num_rows_written < instruction[3:0]) & (stage[0]);
+					mem_request = (stage >= 32'd16) & (num_rows_written < instruction[3:0]) & !(stage[0]);
 					fb_WE = (stage >= 32'd16) & (num_rows_written < instruction[3:0]) & (stage[0]);
 					fb_addr_x = reg_readdata1 + ({5'b0, stage[3:1]});
 					fb_addr_y = reg_readdata2 + ({4'b0, num_rows_written});
