@@ -96,7 +96,7 @@ static int isValidInstruction(unsigned int addr, unsigned int instruction, int i
 			case LOADING_ROM_STATE: return 1;
 			case LOADING_FONT_SET_STATE: return 1;
 			case PAUSED_STATE: return 1;
-			default: return 0;
+			default: return !isWrite;
 		} 
 
 		//Memory address
