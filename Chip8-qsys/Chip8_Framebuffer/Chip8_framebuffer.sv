@@ -16,9 +16,10 @@ module Chip8_framebuffer(
 	input logic			reset,
 	
 	input logic [4:0]	fb_addr_y,//max val = 31
-	input logic [5:0] fb_addr_x,//max val = 63
+	input logic [5:0]   fb_addr_x,//max val = 63
 	input logic			fb_writedata, //data to write to addresse.
-							fb_WE, //enable writing to address
+	input logic		    fb_WE, //enable writing to address
+	input logic         is_paused, 
 
 	output logic		fb_readdata, //data to write to addresse.
 	
@@ -47,7 +48,15 @@ module Chip8_framebuffer(
 			.reset(reset),
 			.fb_pixel_data(fb_readdata_vga),
 			.fb_request_addr(fb_addr_vga),
-			.*
+			.is_paused(is_paused),
+			.VGA_R(VGA_R),
+			.VGA_G(VGA_G),
+			.VGA_B(VGA_B),
+			.VGA_CLK(VGA_CLK),
+			.VGA_HS(VGA_HS),
+			.VGA_VS(VGA_VS),
+			.VGA_BLANK_n(VGA_BLANK_n),
+			.VGA_SYNC_n(VGA_SYNC_n)
 	);
 	
 	Framebuffer fbmem (

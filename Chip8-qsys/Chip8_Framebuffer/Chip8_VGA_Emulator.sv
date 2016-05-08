@@ -12,9 +12,11 @@
  	input logic        clk50, reset,
  	//input logic [2047:0] framebuffer,
 	input logic fb_pixel_data,
+	input logic is_paused,
 	output logic[10:0] fb_request_addr,
  	output logic [7:0] VGA_R, VGA_G, VGA_B,
 	output logic       VGA_CLK, VGA_HS, VGA_VS, VGA_BLANK_n, VGA_SYNC_n);
+
 	/*
 	* 640 X 480 VGA timing for a 50 MHz clock: one pixel every other cycle
 	* 
@@ -100,17 +102,19 @@
    	//120 <= Y-dim < 360
    	//64 <= X-dim < 576
 
-		/*
-   	*    +--------------------------------+
-   	*    | VGA Screen (640x480)           |
-   	*    |   64                      576  |
-		*    |    +----------------------+112 |
-		*    |    |      Chip8 Screen    |    |
-		*    |    |      (64*8x32*8)     |    |
-		*    |    +----------------------+368 |
-		*    |                                |
-		*    +--------------------------------+
+	/*
+	*    +--------------------------------+
+	*    | VGA Screen (640x480)           |
+	*    |   64                      576  |
+	*    |    +----------------------+112 |
+	*    |    |      Chip8 Screen    |    |
+	*    |    |      (64*8x32*8)     |    |
+	*    |    +----------------------+368 |
+	*    |                                |
+	*    +--------------------------------+
    	*/
+
+
 //   	assign inChip = (((hcount[10:1]) >= (chip_hend * (5'd8) + 7'd64)) & (((hcount[10:1]) < (chip_hend * (5'd8) + 10'd576)) &
 //   			((vcount[8:0]) >= (chip_vend * (5'd8) + 7'd112))  & ((vcount[8:0]) < (chip_vend * (5'd8) + 10'd368));
 		
@@ -119,7 +123,48 @@
 								((hcount[10:1]) <  (right_bound))	&
 								((vcount[8:0])  >= (top_bound)) &
 								((vcount[8:0])) <  (bottom_bound)	);
-		
+
+
+		/**
+		 * 16 columns, 8 rows
+		 * +-----------------------------------------+
+		 * |      px24                               |
+		 * |   px48	███ ███ █ █ ███ ███ ███  px432   |
+		 * |        █ █ █ █ █ █ █   █   █ ██         |
+		 * |        ███ ███ █ █ ███ ███ █  █         |
+		 * |        █   █ █ █ █   █ █   █ ██         |
+		 * |        █   █ █ ███ ███ ███ ███  px88    | 
+		 *
+		 */
+
+		parameter paused_left = 10'd64;
+		parameter paused_right = 10'd576;
+		parameter paused_top = 10'd24;
+		parameter paused_bottom = 10'd88;
+
+		logic [9:0] hcount_offseted, vcount_offseted;
+		assign hcount_offseted = (hcount[10:1] - paused_left) >> 4;
+		assign vcount_offseted = (vcount[8:0] - paused_top) >> 3;
+
+	 	reg  [31:0] romdata [7:0];
+
+		initial begin
+		    romdata[7] = 32'b0000_1110_1110_1010_1110_1110_1110_0000;
+		    romdata[6] = 32'b0000_1010_1010_1010_1000_1000_1011_0000;
+		    romdata[5] = 32'b0000_1110_1110_1010_1110_1110_1001_0000;
+		    romdata[4] = 32'b0000_1000_1010_1010_0010_1000_1011_0000;
+		    romdata[3] = 32'b0000_1000_1010_1110_1110_1110_1110_0000;
+		    romdata[2] = 32'b0;
+		    romdata[1] = 32'b0;
+		    romdata[0] = 32'b0;
+		end
+		assign inPaused = is_paused & (
+				((hcount[10:1]) >= (paused_left)) &
+				((hcount[10:1]) < (paused_right)) &
+				((vcount[8:0]) >= (paused_top)) &
+				((vcount[8:0]) < (paused_bottom)) & 
+				romdata[vcount_offseted][hcount_offseted]
+			);
 		
    always_comb begin
 	  	{VGA_R, VGA_G, VGA_B} = {8'h0, 8'h0, 8'h0}; // Black
@@ -129,6 +174,8 @@
 		end else if(inChip) begin
 			//purple to show general area
 			{VGA_R, VGA_G, VGA_B} = {8'h0, 8'h0, 8'hFF};
+		end else if(inPaused) begin
+			{VGA_R, VGA_G, VGA_B} = {8'hFF, 8'hFF, 8'hFF};
 		end
 	end
 

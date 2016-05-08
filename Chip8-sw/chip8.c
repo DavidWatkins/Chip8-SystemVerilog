@@ -97,6 +97,34 @@ int readMemory(int address) {
 	return (op.readdata & 0xff);
 }
 
+void setIRegister(int data) {
+	chip8_opcode op;
+	op.addr = I_ADDR;
+	op.data = (data & 0xffff);
+	chip8_write(&op);
+}
+
+int readIRegister() {
+	chip8_opcode op;
+	op.addr = I_ADDR;
+	chip8_read(&op);
+	return op.readdata;
+}
+
+int readRegister(int reg) {
+	chip8_opcode op;
+	op.addr = V0_ADDR + 4 * (reg & 0xf);
+	chip8_read(&op);
+	return op.readdata;
+}
+
+void writeRegister(int value, int reg) {
+	chip8_opcode op;
+	op.addr = V0_ADDR + 4 * (reg & 0xf);
+	op.data = value & 0xff;
+	chip8_write(&op);
+}
+
 /*
 * Load the font set onto the chip8 sequentially
 * Uses the op codes specified in chip8driver.h
@@ -114,13 +142,13 @@ void loadfontset() {
 	}
 }
 
-void readWriteFramebuffer() {
+void refreshFrameBuffer() {
 	int x, y;
 	for(x = 0; x < 64; ++x) {
 		for(y = 0; y < 32; ++y) {
 
-			int mem_val = readFramebuffer(x, y);
-			setFramebuffer(x, y, !mem_val);
+			// int mem_val = readFramebuffer(x, y);
+			setFramebuffer(x, y, 0);
 
 			// printf("(x: %d, y: %d) Wrote: %d, Read: %d\n", x, y, !mem_val, mem_val);
 		}
@@ -152,6 +180,10 @@ void loadROM(const char* romfilename) {
 		} else {
 			printf("%d ", got);
 		}
+	}
+
+	for(i = i; i < MEMORY_END - MEMORY_START; ++i) {
+		setMemory(MEMORY_START + i, 0);
 	}
 
 	fclose(romfile); // Close the file
@@ -192,7 +224,8 @@ int readPC() {
 	chip8_opcode op;
 	op.addr = PROGRAM_COUNTER_ADDR;
 	chip8_read(&op);
-	return op.readdata;
+	printf("Instruction: %d, PC: %d\n", (op.readdata & 0xfffff000) >> 12, (op.readdata & 0xfff));
+	return (op.readdata & 0xfff);
 }
 
 void writePC(int pc) {
@@ -216,6 +249,7 @@ void resetChip8(const char* filename) {
 	pauseChip8();
 	loadfontset();
 	loadROM(filename);
+	refreshFrameBuffer();
 
 	printMemory();
 }
@@ -309,7 +343,7 @@ int main(int argc, char** argv)
 	loadROM(argv[1]);
 
 	printf("Flipping framebuffer\n");
-	readWriteFramebuffer();
+	refreshFrameBuffer();
 
 	printf("Chip8 has started\n");
 	// startChip8();
@@ -325,6 +359,9 @@ int main(int argc, char** argv)
 		int pc = readPC();
 		int mem = readMemory(pc);
 		printf("Program counter is: %d, instruction is: %d\n", pc, mem);
+		printf("I register: %d\n", readIRegister());
+		printf("v1: %d\n", readRegister(1));
+		printf("v2: %d\n", readRegister(2));
 		// printf("Sound timer: %d\n", readSoundTimer());
 		// int i;
 		// for(i = 0; i < 100000; ++i) 

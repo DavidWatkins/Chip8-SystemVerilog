@@ -58,12 +58,13 @@
     logic        halt_for_keypress;
 
     //Framebuffer values
-    logic			fbreset;
+    logic		fbreset;
 	logic [4:0]	fb_addr_y;//max val = 31
 	logic [5:0] fb_addr_x;//max val = 63
-	logic			fb_writedata; //data to write to addresse.
-	logic					fb_WE; //enable writing to address
+	logic		fb_writedata; //data to write to addresse.
+	logic		fb_WE; //enable writing to address
 	logic		fb_readdata; //data to write to addresse.
+    logic       fb_paused;
 
     //Keyboard
     logic       ispressed;
@@ -92,10 +93,10 @@
     logic [7:0]  cpu_reg_writedata1, cpu_reg_writedata2;
     logic        cpu_mem_WE1, cpu_mem_WE2;
     logic [11:0] cpu_mem_addr1, cpu_mem_addr2;
+    logic        cpu_mem_request;
     logic [ 7:0] cpu_mem_writedata1, cpu_mem_writedata2;
     logic        cpu_reg_I_WE;
     logic [15:0] cpu_reg_I_writedata;
-    logic        cpu_sp_push, cpu_sp_pop;
     logic        cpu_fbreset;
     logic [4:0]	 cpu_fb_addr_y;
     logic [5:0]	 cpu_fb_addr_x;
@@ -122,7 +123,7 @@
 
     //Stack
     logic           stack_reset;
-    STACK_OP  stack_op;
+    STACK_OP        stack_op;
     logic [15:0]    stack_writedata;
     logic [15:0]    stack_outdata;
 
@@ -157,8 +158,7 @@
             fb_writedata <= 1'b0; 
             fb_WE <= 1'b0;
 
-            cpu_sp_push <= 1'b0; 
-            cpu_sp_pop <= 1'b0;
+            stack_op <= STACK_HOLD;
 
             state <= Chip8_PAUSED;
             cpu_instruction <= 16'h0;
@@ -172,6 +172,8 @@
 
             sound_on <= 1'b0;
             chipselect_happened <= 1'b0;
+
+            fb_paused <= 1'b1;
 
         //Handle input from the ARM processor
     end else if(chipselect) begin
@@ -220,7 +222,7 @@
 
 				//Read/write to program counter
 				18'h14 : begin 
-					data_out <= {20'h0, pc};
+					data_out <= {4'h0, cpu_instruction, pc};
 					if(write) pc <= writedata[11:0]; //0-4095
 				end
 
@@ -300,10 +302,13 @@
         delay_timer_write_enable <= 1'b0;
         chipselect_happened <= 1'b0;
     end else begin 
+        fb_paused <= state == Chip8_PAUSED;
 
         case (state)
             Chip8_RUNNING: begin
                 sound_on <= sound_timer_out;   
+                // memaddr1 <= pc;
+                // memaddr2 <= pc + 12'h1; 
 
                 if(halt_for_keypress) begin
                     if(ispressed) begin
@@ -316,7 +321,18 @@
 
                     bit_ovewritten <= 1'b0;
                     is_drawing <= 1'b0;
+
+                    delay_timer_write_enable <= 1'b0;
+                    sound_timer_write_enable <= 1'b0;
+                    regWE1 <= 1'b0;
+                    regWE2 <= 1'b0;
+                    memWE1 <= 1'b0;
+                    memWE2 <= 1'b0;
+                    stack_op <= STACK_HOLD;
                 end else if (stage == 32'h1) begin
+                    memaddr1 <= pc;
+                    memaddr2 <= pc + 12'h1;
+
                     cpu_instruction[15:8] <= memreaddata1;
                     cpu_instruction[7:0]  <= memreaddata2;
                 end else if (stage >= 32'h2) begin
@@ -381,21 +397,24 @@
                         I <= cpu_reg_I_writedata;
                     end
 
-                    if(cpu_sp_push) begin
+                    if(cpu_stk_op == STACK_PUSH) begin
                         stack_op <= STACK_PUSH;
                         stack_writedata <= pc;
                     end 
 
-                    if(cpu_sp_pop) begin
-                        stack_op <= STACK_POP;
-                        next_pc <= stack_outdata[11:0];
-                    end else begin
-                        case (cpu_pc_src)
-                            PC_SRC_ALU  : next_pc <= cpu_PC_writedata;
-                            PC_SRC_SKIP : next_pc <= pc + 12'd4;
-                            PC_SRC_NEXT : next_pc <= pc + 12'd2;
-                            default : next_pc <= pc + 12'd2;
-                        endcase
+                    //next_pc modified on 4th stage only
+                    if(stage == 32'h3) begin
+                        if(cpu_stk_op == STACK_POP) begin
+                            stack_op <= STACK_POP;
+                            next_pc <= stack_outdata[11:0];
+                        end else begin
+                            case (cpu_pc_src)
+                                PC_SRC_ALU  : next_pc <= cpu_PC_writedata;
+                                PC_SRC_SKIP : next_pc <= pc + 12'd4;
+                                PC_SRC_NEXT : next_pc <= pc + 12'd2;
+                                default : next_pc <= pc /*default next_pc <= pc + 12'd2*/;
+                            endcase
+                        end
                     end
 
                     if(cpu_fbreset) begin
@@ -415,21 +434,28 @@
                         halt_for_keypress <= 1'b1;
                     end                     
 
+                    if(cpu_mem_request) begin
+                        memaddr1 <= cpu_mem_addr1;
+                        memaddr2 <= cpu_mem_addr2;
+                    end else begin
+                        memaddr1 <= pc;
+                        memaddr2 <= pc + 12'h1; 
+                    end
                         //Always
                         reg_addr1 <= cpu_reg_addr1;
                         fb_addr_x <= cpu_fb_addr_x;
                         fb_addr_y <= cpu_fb_addr_y;
-                        memaddr1 <= cpu_mem_addr1;
-                        memaddr2 <= cpu_mem_addr2;
+                        // memaddr1 <= cpu_mem_addr1;
+                        // memaddr2 <= cpu_mem_addr2;
                     end
 
                     //Cap of 50000, since 1000 instructions/sec is reasonable
                     if(!halt_for_keypress) begin
-                        if(stage + 1 > 32'd50000) begin
+                        if(stage >= 32'd200000) begin
                             stage <= 32'h0;
                             pc <= next_pc;
                         end else begin
-                            stage <= stage + 1;
+                            stage <= stage + 32'h1;
                         end
                     end
                 end
@@ -453,6 +479,7 @@
         .fb_writedata(fb_writedata),
         .fb_WE(fb_WE),
         .fb_readdata(fb_readdata),
+        .is_paused   (fb_paused),
         .VGA_R(VGA_R),
         .VGA_G(VGA_G),
         .VGA_B(VGA_B),
@@ -517,6 +544,7 @@
         .mem_WE2(cpu_mem_WE2),
         .mem_addr1(cpu_mem_addr1),
         .mem_addr2(cpu_mem_addr2),
+        .mem_request      (cpu_mem_request),
         .mem_writedata1(cpu_mem_writedata1),
         .mem_writedata2(cpu_mem_writedata2),
         .reg_I_WE(cpu_reg_I_WE),

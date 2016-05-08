@@ -54,6 +54,7 @@ module Chip8_CPU(
 	output logic mem_WE1, mem_WE2,
 	output logic[11:0] mem_addr1, mem_addr2,
 	output logic[ 7:0] mem_writedata1, mem_writedata2,
+	output logic       mem_request,
 	
 	output logic reg_I_WE,
 	output logic[15:0] reg_I_writedata,
@@ -108,6 +109,7 @@ module Chip8_CPU(
 		mem_WE2 				= 1'b0;
 		mem_addr1 				= 12'h0;
 		mem_addr2 				= 12'h0;
+		mem_request             = 1'b0;
 		mem_writedata1			= 8'h0;
 		mem_writedata2			= 8'h0;
 		reg_I_WE 				= 1'b0;
@@ -156,7 +158,7 @@ module Chip8_CPU(
 				//Return from a subroutine.
 				//The interpreter sets the program counter to the address at the
 				//top of the stack, then subtracts 1 from the stack pointer.
-				if(stage == 32'h2) begin
+				if(stage == 32'h3) begin
 					stk_op = STACK_POP;
 					pc_src = PC_SRC_STACK;
 				end else begin
@@ -167,7 +169,7 @@ module Chip8_CPU(
 			16'h1xxx: begin //1nnn - JP addr
 				//Jump to location nnn.
 				//The interpreter sets the program counter to nnn.
-				if(stage == 32'h2) begin
+				if(stage == 32'h3) begin
 					pc_src = PC_SRC_ALU;
 					PC_writedata = instruction[11:0];
 				end else begin
@@ -180,7 +182,7 @@ module Chip8_CPU(
 				//The interpreter increments the stack pointer, then puts the
 				//current PC on the top of the stack. The PC is then set to nnn.
 
-				if(stage == 32'h2) begin
+				if(stage == 32'h3) begin
 					stk_op = STACK_PUSH;
 					stk_writedata = PC_readdata;
 					pc_src = PC_SRC_ALU;
@@ -452,7 +454,7 @@ module Chip8_CPU(
 				if(stage == 32'h2) begin
 					reg_addr1 = instruction[11:8];
 					reg_addr2 = instruction[ 7:4];
-				end else if(reg_readdata1 != reg_readdata2) begin
+				end else if(stage == 32'h3 && reg_readdata1 != reg_readdata2) begin
 					reg_addr1 = instruction[11:8];
 					reg_addr2 = instruction[ 7:4];
 					pc_src = PC_SRC_SKIP;
@@ -534,6 +536,7 @@ module Chip8_CPU(
 					else num_rows_written = stage_shifted_by4_minus1[3:0];//((stage >> 32'h4) - 32'h1);
 					
 					mem_addr1 = reg_I_readdata[11:0] + {8'b0,num_rows_written};
+					mem_request = (stage >= 32'd16) & (num_rows_written < instruction[3:0]) & (stage[0]);
 					fb_WE = (stage >= 32'd16) & (num_rows_written < instruction[3:0]) & (stage[0]);
 					fb_addr_x = reg_readdata1 + ({5'b0, stage[3:1]});
 					fb_addr_y = reg_readdata2 + ({4'b0, num_rows_written});
@@ -551,7 +554,7 @@ module Chip8_CPU(
 
 				if(stage == 32'h2) begin
 					reg_addr1 = instruction[11:8];
-				end else if(key_pressed && key_press == reg_readdata1) begin
+				end else if(stage == 32'h3 && key_pressed && key_press == reg_readdata1) begin
 					pc_src = PC_SRC_SKIP;
 					//CPU DONE
 				end else begin
@@ -567,7 +570,7 @@ module Chip8_CPU(
 
 				if(stage == 32'h2) begin
 					reg_addr1 = instruction[11:8];
-				end else if(key_pressed == 1'h0 || key_press != reg_readdata1) begin
+				end else if(stage == 32'h3 && key_pressed == 1'h0 || key_press != reg_readdata1) begin
 					pc_src = PC_SRC_SKIP;
 				end else begin
 					//CPU DONE
@@ -686,6 +689,7 @@ module Chip8_CPU(
 					reg_addr1 = instruction[11:8];
 
 					mem_addr1 = reg_I_readdata[11:0];
+					mem_request = 1'b1;
 					mem_writedata1 = bcd_hundreds;
 					mem_WE1 = 1'b1;
 				end else if(stage == 32'h4) begin
@@ -697,6 +701,7 @@ module Chip8_CPU(
 					alu_in2 = 1;
 
 					mem_addr1 = alu_out[11:0];
+					mem_request = 1'b1;
 					mem_writedata1 = bcd_tens;
 					mem_WE1 = 1'b1;
 				end else if(stage == 32'h5) begin
@@ -707,6 +712,7 @@ module Chip8_CPU(
 					alu_in2 = 2;
 
 					mem_addr1 = alu_out[11:0];
+					mem_request = 1'b1;
 					mem_writedata1 = bcd_ones;
 					mem_WE1 = 1'b1;
 				end else begin
@@ -721,11 +727,13 @@ module Chip8_CPU(
 
 				if(stage == 32'h2) begin
 					mem_addr1 = reg_I_readdata[11:0];
+					mem_request = 1'b1;
 				end else if(stage <= instruction[11:8] + 3) begin
 					alu_cmd = ALU_f_ADD;
 					alu_in1 = reg_I_readdata;
 					alu_in2 = stage[15:0] - 2'h3;
 					mem_addr1 = alu_out[11:0];
+					mem_request = 1'b1;
 
 					reg_addr1 = stage[3:0] - 2'h3;
 					reg_writedata1 = mem_readdata1;
@@ -751,6 +759,7 @@ module Chip8_CPU(
 					alu_in2 = stage[15:0] - 2'h3;
 
 					mem_addr1 = alu_out[11:0];
+					mem_request = 1'b1;
 					mem_writedata1 = reg_readdata1;
 					mem_WE1 = 1'b1;
 				end else begin
