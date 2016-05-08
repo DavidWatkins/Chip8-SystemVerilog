@@ -56,7 +56,7 @@
 				end
 
 				ALU_f_MINUS : begin
-					alu_carry = input1 < input2;
+					alu_carry = input1 > input2;
 					out = input1 - input2;
 				end
 
