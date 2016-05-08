@@ -65,9 +65,11 @@ module Chip8_CPU(
 	output logic [4:0]	fb_addr_y,//max val = 31
 	output logic [5:0]	fb_addr_x,//max val = 63
 	output logic		fb_writedata, //data to write to addresse.
-							fb_WE, //enable writing to address
-							fbreset,
-							bit_overwritten,
+	output logic		fb_WE, //enable writing to address
+	output logic		fbreset,
+
+	output logic		bit_overwritten, //VF overwritten
+	output logic 		isDrawing, 		 //Draw instruction where VF could be overwritten
 
 	output logic halt_for_keypress
 );
@@ -110,21 +112,22 @@ module Chip8_CPU(
 		mem_writedata2			= 8'h0;
 		reg_I_WE 				= 1'b0;
 		reg_I_writedata			= 16'h0;
-		fb_addr_y	=	5'h0;
-		fb_addr_x	=	6'h0;
-		fb_writedata	=	1'b0;
-		fb_WE		=	1'b0;
+		fb_addr_y				= 5'h0;
+		fb_addr_x				= 6'h0;
+		fb_writedata			= 1'b0;
+		fb_WE					= 1'b0;
 		fbreset 				= 1'b0;
-		num_rows_written	=	4'h0;
-		bit_overwritten = 1'b0;
+		num_rows_written		= 4'h0;
+		bit_overwritten 		= 1'b0;
 		halt_for_keypress 		= 1'b0;
 		alu_in1 				= 16'h0;
 		alu_in2 				= 16'h0;
 		alu_cmd 				= ALU_f_NOP;
 		to_bcd 					= 8'h0;
-		stk_op				= STACK_HOLD;
-		stk_reset 	= 1'b0;
-		stk_writedata 	= 16'b0;
+		stk_op					= STACK_HOLD;
+		stk_reset 				= 1'b0;
+		stk_writedata 			= 16'b0;
+		isDrawing 				= 1'b0;
 		/*END DEFAULT VALUES*/
 		
 		
@@ -537,6 +540,7 @@ module Chip8_CPU(
 					fb_writedata = mem_readdata1[stage[3:1]] ^ fb_readdata;
 					bit_overwritten = (mem_readdata1[stage[3:1]]) & (fb_readdata) & fb_WE;
 						//bit_overwritten goes high whenever a pixel is set from 1 to 0
+					isDrawing = 1'b1;
 				end
 				
 			end
