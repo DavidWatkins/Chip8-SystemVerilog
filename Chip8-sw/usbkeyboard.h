@@ -36,19 +36,19 @@
 #define KEY1 0x1E
 #define KEY2 0x1F
 #define KEY3 0x20
-#define KEYC 0x06
-#define KEY4 0x21
-#define KEY5 0x22
-#define KEY6 0x23
-#define KEYD 0x07
-#define KEY7 0x24
-#define KEY8 0x25
-#define KEY9 0x26
-#define KEYE 0x08
-#define KEYA 0x04
-#define KEY0 0x27
-#define KEYB 0x05
-#define KEYF 0x09
+#define KEYC 0x21
+#define KEY4 0x14
+#define KEY5 0x1A
+#define KEY6 0x08
+#define KEYD 0x15
+#define KEY7 0x04
+#define KEY8 0x16
+#define KEY9 0x07
+#define KEYE 0x09
+#define KEYA 0x1d
+#define KEY0 0x1b
+#define KEYB 0x06
+#define KEYF 0x19
 
 /*
 * Three additional keys will be defined

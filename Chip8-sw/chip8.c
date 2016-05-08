@@ -62,6 +62,7 @@ void chip8_write(chip8_opcode *op) {
 void chip8_read(chip8_opcode *op) {
 	if(ioctl(chip8_fd, CHIP8_READ_ATTR, op)) {
 		perror("ioctl(CHIP8_READ_ATTR) failed");
+		printf("(%d, %d)\n", op->addr, op->data);
 		quit_program(0);
 	}
 }
@@ -106,7 +107,7 @@ void loadfontset() {
 	int i;
 	for(i = 0; i < FONTSET_LENGTH; ++i) {
 		setMemory(i, CHIP8_FONTSET[i]);
-		int mem_val = readMemory(i);
+		// int mem_val = readMemory(i);
 		// printf("(Address: %d) Wrote: %d, Read: %d\n", i, CHIP8_FONTSET[i], mem_val);
 	}
 }
@@ -190,6 +191,7 @@ void checkforkeypress() {
 		sprintf(keystate, "%02x %02x %02x", packet.modifiers, packet.keycode[0], packet.keycode[1]);
 		char val[1];
 		if (kbiskeypad(&packet, val)) {
+			printf("Key pressed %d\n", val[0]);
 			chip8writekeypress(val[0], 1);
 		} else if(kbisstart(&packet)) {
 			startChip8();
@@ -200,6 +202,8 @@ void checkforkeypress() {
 		} else {
 			chip8writekeypress(0, 0);
 		}
+	} else {
+		printf("Size mismatch %d %d\n", sizeof(packet), transferred);
 	}
 }
 
@@ -208,6 +212,13 @@ int chip8isRunning() {
 	op.addr = STATE_ADDR;
 	chip8_read(&op);
 	return op.readdata == RUNNING_STATE;
+}
+
+int readPC() {
+	chip8_opcode op;
+	op.addr = PROGRAM_COUNTER_ADDR;
+	chip8_read(&op);
+	return op.readdata;
 }
 
 int main(int argc, char** argv)
@@ -223,7 +234,6 @@ int main(int argc, char** argv)
 		exit(1);
 	}
 
-	chip8_opcode op;
 	static const char filename[] = "/dev/vga_led";
 	if ( (chip8_fd = open(filename, O_RDWR)) == -1) {
 		fprintf(stderr, "could not open %s\n", filename);
@@ -247,6 +257,8 @@ int main(int argc, char** argv)
 	printf("Chip8 has started\n");
 	startChip8();
 	while(chip8isRunning()) {
+		int pc = readPC();
+		printf("Program counter is: %d\n", pc);
 		checkforkeypress();
 		usleep(4000);
 	}
