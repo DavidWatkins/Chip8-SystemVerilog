@@ -82,6 +82,8 @@ module Chip8_CPU(
 	logic[7:0] to_bcd;
 	wire[3:0] bcd_hundreds, bcd_tens, bcd_ones;
 	
+	wire[31:0] stage_shift_hold = (stage >> 32'h4) - 32'h1;
+	wire[7:0] stage_shifted_by4_minus1 = stage_shift_hold[7:0];
 	logic[3:0] num_rows_written; //used for sprite writing
 
 	Chip8_rand_num_generator rand_num_generator(cpu_clk, rand_num);
@@ -527,10 +529,10 @@ module Chip8_CPU(
 					reg_addr1 = instruction[11:8];
 					reg_addr2 = instruction[ 7:4];
 					
-					mem_addr1 = reg_I_readdata[11:0] + num_rows_written;
-					if(stage <= 32'h31) num_rows_written = 4'b0;
-					else num_rows_written = ((stage >> 32'h4) - 32'h1);
+					if(stage <= 32'h15) num_rows_written = 4'b0;
+					else num_rows_written = stage_shifted_by4_minus1[3:0];//((stage >> 32'h4) - 32'h1);
 					
+					mem_addr1 = reg_I_readdata[11:0] + {8'b0,num_rows_written};
 					fb_WE = (stage >= 32'd16) & (num_rows_written < instruction[3:0]) & (stage[0]);
 					fb_addr_x = reg_readdata1 + ({5'b0, stage[3:1]});
 					fb_addr_y = reg_readdata2 + ({4'b0, num_rows_written});
