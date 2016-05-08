@@ -539,56 +539,6 @@ module Chip8_CPU(
 						//bit_overwritten goes high whenever a pixel is set from 1 to 0
 				end
 				
-				/*
-				reg_addr1 = instruction[11:8];
-				reg_addr2 = instruction[ 7:4];
-				mem_addr1 = mem_addr1;
-				fb_addr_x_hold = reg_readdata1[5:0];
-				fb_addr_y_hold = reg_readdata2[4:0];
-				num_rows_written = num_rows_written;
-				overwritten_VF_flag = overwritten_VF_flag;
-				if(stage == 32'h2) begin
-					reg_addr1 = instruction[11:8];
-					reg_addr2 = instruction[ 7:4];
-					mem_addr1 = reg_I_readdata[11:0];
-					fb_addr_x_hold = reg_readdata1[5:0];
-					fb_addr_y_hold = reg_readdata2[4:0];
-					fb_WE = 1'b0;
-					num_rows_written = 1'b0;
-					overwritten_VF_flag = 1'b0;
-				end else if(stage >= 32'd15) begin
-					if(stage >= 32'd5005) begin//5000 is some arbitrary value that is super large and wont be used
-						reg_WE1 = 1'b0;
-					end else if(stage >= 32'd5000) begin
-						reg_addr1 = 4'hF;
-						reg_WE1 = 1'b1;
-						reg_writedata1 = {7'h0, overwritten_VF_flag};
-						
-						mem_addr1 = mem_addr1;
-					end else if(stage[3:0] == 4'd15) begin
-						fb_addr_x = fb_addr_x_hold;
-						fb_addr_y = fb_addr_y_hold + num_rows_written;
-						if (num_rows_written < instruction[3:0]) begin
-							fb_WE = 1'b1;
-						end
-					end else if((num_rows_written < instruction[3:0]) & (stage[2:0] <= 3'd7)) begin
-						//drawing row by XORing
-						fb_addr_x = fb_addr_x_hold + stage[2:0];
-						fb_addr_y = fb_addr_y_hold + num_rows_written;
-						fb_writedata = mem_readdata1[stage[2:0]] ^ fb_read_delayed;
-									//fb_read_delayed is just fb_read, but delayed by 1 cycle
-									//see its assignment before the super always_comb block
-						overwritten_VF_flag = overwritten_VF_flag | (fb_read_delayed & mem_readdata1[stage[2:0]]);
-						if(stage[2:0] == 3'd7) begin
-							//loop maintenance after doing a row
-							mem_addr1 = mem_addr1 + 12'd1;
-							fb_WE = 1'b0;
-							num_rows_written = num_rows_written + 4'h1;
-						end 
-					end
-				end
-			end
-			*/
 			end
 			16'hEx9E: begin //Ex9E - SKP Vx
 				//Skip next instruction if key with the value of Vx is pressed.
