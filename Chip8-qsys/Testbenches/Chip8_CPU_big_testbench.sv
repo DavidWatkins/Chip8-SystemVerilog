@@ -172,7 +172,7 @@ task automatic testDxyn(ref logic cpu_clk,
 					ref logic[4:0] fb_addr_y,
 					ref logic fb_writedata, fb_readdata, fb_WE,
 					ref logic[15:0] reg_I_readdata,
-					ref logic bit_overwritten);
+					ref logic bit_overwritten, isDrawing);
 	instruction = 16'hd392;
 	stage = 32'h0;
 	reg_I_readdata = 16'h0F0F;
@@ -189,7 +189,7 @@ task automatic testDxyn(ref logic cpu_clk,
 	wait(stage == 32'h2); #1ns;
 	assert(reg_addr1==instruction[11:8] & reg_addr2==instruction[7:4] &
 			mem_addr1==reg_I_readdata & reg_WE1==1'b0  &  reg_WE2==1'b0  &  
-			mem_WE1==1'b0  &  fb_WE==1'b0)
+			mem_WE1==1'b0  &  fb_WE==1'b0 & isDrawing)
 	else begin
 		$display("INSTR DXYN HAS FAILED TO SET INITIAL OUTPUT VALS IN STAGE 3");
 		failed = failed + 1;
@@ -204,7 +204,7 @@ task automatic testDxyn(ref logic cpu_clk,
 	wait(stage == 32'h3); #1ns;
 	assert(reg_addr1==instruction[11:8] & reg_addr2==instruction[7:4] &
 			mem_addr1==reg_I_readdata & reg_WE1==1'b0  &  reg_WE2==1'b0  &  
-			mem_WE1==1'b0  &  fb_WE==1'b0)
+			mem_WE1==1'b0  &  fb_WE==1'b0 & isDrawing)
 	else begin
 		$display("INSTR DXYN HAS FAILED TO HOLD VALS FROM STATE 2 IN STATE 3\n\tEx--mem_addr1= %h",mem_addr1);
 		failed = failed + 1;
@@ -213,7 +213,7 @@ task automatic testDxyn(ref logic cpu_clk,
 	wait(stage == 32'd15); #1ns;
 	assert(reg_addr1==instruction[11:8] & reg_addr2==instruction[7:4] &
 			mem_addr1==reg_I_readdata & reg_WE1==1'b0  &  reg_WE2==1'b0  &  
-			mem_WE1==1'b0  &  fb_WE==1'b0)
+			mem_WE1==1'b0  &  fb_WE==1'b0 & isDrawing)
 	else begin
 		$display("INSTR DXYN HAS FAILED TO HOLD VALS FROM STATE 2 IN STATE 15\n\tEx--mem_addr1= %h",mem_addr1);
 		failed = failed + 1;
@@ -225,7 +225,7 @@ task automatic testDxyn(ref logic cpu_clk,
 	assert(reg_addr1==instruction[11:8] & reg_addr2==instruction[7:4] &
 			mem_addr1==reg_I_readdata & fb_WE==1'b1  & 
 			fb_addr_x==reg_readdata1 & fb_addr_y==reg_readdata2 & 
-			fb_writedata==1'b1 & bit_overwritten==1'b0)
+			fb_writedata==1'b1 & bit_overwritten==1'b0 & isDrawing)
 	else begin
 		$display("INSTR DXYN FAILED IN ITS FIRST WRITE STAGE");
 		failed = failed + 1;
@@ -234,7 +234,7 @@ task automatic testDxyn(ref logic cpu_clk,
 	assert(reg_addr1==instruction[11:8] & reg_addr2==instruction[7:4] &
 			mem_addr1==reg_I_readdata & fb_WE==1'b0  & 
 			fb_addr_x==(reg_readdata1+1) & fb_addr_y==reg_readdata2 &
-			bit_overwritten==1'b0)
+			bit_overwritten==1'b0 & isDrawing)
 	else begin
 		$display("INSTR DXYN FAILED IN STAGE 18");
 		failed = failed + 1;
@@ -244,7 +244,7 @@ task automatic testDxyn(ref logic cpu_clk,
 	assert(reg_addr1==instruction[11:8] & reg_addr2==instruction[7:4] &
 			mem_addr1==reg_I_readdata & fb_WE==1'b1  & 
 			fb_addr_x==(reg_readdata1+7) & fb_addr_y==reg_readdata2 &
-			bit_overwritten==1'b1)
+			bit_overwritten==1'b1 & isDrawing)
 	else begin
 		$display("INSTR DXYN FAILED IN STAGE 31");
 		failed = failed + 1;
@@ -256,7 +256,7 @@ task automatic testDxyn(ref logic cpu_clk,
 	assert(reg_addr1==instruction[11:8] & reg_addr2==instruction[7:4] &
 			mem_addr1==(reg_I_readdata+1) & fb_WE==1'b0  & 
 			fb_addr_x==(reg_readdata1) & fb_addr_y==(reg_readdata2+1) &
-			bit_overwritten==1'b0)
+			bit_overwritten==1'b0 & isDrawing)
 	else begin
 		$display("INSTR DXYN FAILED IN STAGE 32\n\treg_readdata2=%h\n\tfb_addr_y=%h",reg_readdata2,fb_addr_y);
 		$display("\tmem_addr1=%h\n\treg_I_readdata=%h",mem_addr1,reg_I_readdata);
@@ -269,7 +269,7 @@ task automatic testDxyn(ref logic cpu_clk,
 	assert(reg_addr1==instruction[11:8] & reg_addr2==instruction[7:4] &
 			mem_addr1==(reg_I_readdata+1) & fb_WE==1'b1  & 
 			fb_addr_x==(reg_readdata1) & fb_addr_y==(reg_readdata2+1) &
-			bit_overwritten==1'b0)
+			bit_overwritten==1'b0 & isDrawing)
 	else begin
 		$display("INSTR DXYN FAILED IN STAGE 33\n\treg_readdata2=%h\n\tfb_addr_y=%h",reg_readdata2,fb_addr_y);
 		$display("\tmem_addr1=%h\n\treg_I_readdata=%h",mem_addr1,reg_I_readdata);
@@ -280,7 +280,7 @@ task automatic testDxyn(ref logic cpu_clk,
 	assert(reg_addr1==instruction[11:8] & reg_addr2==instruction[7:4] &
 			mem_addr1==(reg_I_readdata+1) & fb_WE==1'b1  & 
 			fb_addr_x==(reg_readdata1+8'h3) & fb_addr_y==(reg_readdata2+1) &
-			fb_writedata==1'b1 & bit_overwritten==1'b0)
+			fb_writedata==1'b1 & bit_overwritten==1'b0 & isDrawing)
 	else begin
 		$display("INSTR DXYN FAILED IN STAGE 39\n\treg_readdata2=%h\n\tfb_addr_y=%h",reg_readdata2,fb_addr_y);
 		$display("\tmem_addr1=%h\n\treg_I_readdata=%h",mem_addr1,reg_I_readdata);
@@ -291,7 +291,7 @@ task automatic testDxyn(ref logic cpu_clk,
 	assert(reg_addr1==instruction[11:8] & reg_addr2==instruction[7:4] &
 			mem_addr1==(reg_I_readdata+1) & fb_WE==1'b1  & 
 			fb_addr_x==(reg_readdata1+8'h7) & fb_addr_y==(reg_readdata2+1) &
-			fb_writedata==1'b0 & bit_overwritten==1'b0)
+			fb_writedata==1'b0 & bit_overwritten==1'b0 & isDrawing)
 	else begin
 		$display("INSTR DXYN FAILED IN STAGE 47\n\treg_readdata2=%h\n\tfb_addr_y=%h",reg_readdata2,fb_addr_y);
 		$display("\tmem_addr1=%h\n\treg_I_readdata=%h",mem_addr1,reg_I_readdata);
@@ -299,7 +299,7 @@ task automatic testDxyn(ref logic cpu_clk,
 	end
 	
 	wait(stage == 32'd48); #1ns;
-	assert(fb_WE==1'b0  &  bit_overwritten==1'b0)
+	assert(fb_WE==1'b0  &  bit_overwritten==1'b0 & isDrawing)
 	else begin
 		failed = failed + 1;
 		$display("INSTR DXYN FAILED IN STAGE: %d", stage);
@@ -307,7 +307,7 @@ task automatic testDxyn(ref logic cpu_clk,
 
 	
 	wait(stage == 32'd61); #1ns;
-	assert(fb_WE==1'b0  &  bit_overwritten==1'b0) begin
+	assert(fb_WE==1'b0  &  bit_overwritten==1'b0 & isDrawing) begin
 		$display("Dxyn draw sprite works!! :D");
 		total = total + 1;
 	end else begin
@@ -481,7 +481,7 @@ module Chip8_CPU_big_testbench( ) ;
 	logic [5:0]	fb_addr_x;//max val = 63
 	logic		fb_writedata, //data to write to addresse.
 							fb_WE, //enable writing to address
-							fbreset;
+							fbreset, isDrawing;
 
 	logic halt_for_keypress;
 	
@@ -489,6 +489,8 @@ module Chip8_CPU_big_testbench( ) ;
 	STACK_OP stk_op;
 	logic[15:0] stk_writedata;
 	logic bit_overwritten;
+	
+	
 	int total = 0;
 	int failed = 0;
 
@@ -533,7 +535,7 @@ module Chip8_CPU_big_testbench( ) ;
 					reg_addr1, reg_addr2, reg_WE1, reg_WE2,
 					reg_readdata1, reg_readdata2,mem_readdata1, 
 					mem_writedata1,mem_WE1, mem_addr1, fb_addr_x,fb_addr_y,
-					fb_writedata, fb_readdata, fb_WE,reg_I_readdata, bit_overwritten);
+					fb_writedata, fb_readdata, fb_WE,reg_I_readdata, bit_overwritten,isDrawing);
 		
 		test_resets(cpu_clk, stage, total,failed,delay_timer_WE, sound_timer_WE,
 			delay_timer_writedata, sound_timer_writedata, /*PC_SRC pc_src,*/
