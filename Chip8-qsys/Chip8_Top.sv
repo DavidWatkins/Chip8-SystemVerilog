@@ -382,6 +382,7 @@
                     if(cpu_mem_WE1) begin
                         memwritedata1 <= cpu_mem_writedata1;
                         memWE1 <= 1'b1;
+								memaddr1 <= cpu_mem_addr1;
                     end else begin
                         memWE1 <= 1'b0;
                     end
@@ -389,11 +390,13 @@
                     if(cpu_mem_WE2) begin
                         memwritedata2 <= cpu_mem_writedata2;
                         memWE2 <= 1'b1;
+								mem_addr2 <= cpu_mem_addr2;
                     end else begin
                         memWE2 <= 1'b0;
                     end
 
                     if(cpu_reg_I_WE) begin
+								reg_I_WE = cpu_reg_I_WE;
                         I <= cpu_reg_I_writedata;
                     end
 
@@ -437,6 +440,10 @@
                     if(cpu_mem_request) begin
                         memaddr1 <= cpu_mem_addr1;
                         memaddr2 <= cpu_mem_addr2;
+								memwritedata1 <= cpu_mem_writedata1;
+								memwritedata2 <= cpu_mem_writedata2;
+								memWE1 <= cpu_mem_WE1;
+								memWE2 <= cpu_mem_WE2;
                     end else begin
                         memaddr1 <= pc;
                         memaddr2 <= pc + 12'h1; 

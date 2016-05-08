@@ -724,34 +724,9 @@ module Chip8_CPU(
 				//Store registers V0 through Vx in memory starting at location I
 				//The interpreter copies the values of registers V0 through Vx 
 				//into memory, starting at the address in I.
-
-				if(stage == 32'h2) begin
-					mem_addr1 = reg_I_readdata[11:0];
-					mem_request = 1'b1;
-				end else if(stage <= instruction[11:8] + 3) begin
-					alu_cmd = ALU_f_ADD;
-					alu_in1 = reg_I_readdata;
-					alu_in2 = stage[15:0] - 2'h3;
-					mem_addr1 = alu_out[11:0];
-					mem_request = 1'b1;
-
-					reg_addr1 = stage[3:0] - 2'h3;
-					reg_writedata1 = mem_readdata1;
-					reg_WE1 = 1'b1;
-				end else begin
-					//CPU DONE
-				end
-			end
-
-			16'hFx65: begin //Fx65 - LD Vx, [I]
-				//Read registers V0 through Vx from memory starting at location 
-				//I.
-				//The interpreter reads values from memory starting at location 
-				//I into registers V0 through Vx.
-
 				if(stage == 32'h2) begin
 					reg_addr1 = 4'h0;
-				end else if(stage <= instruction[11:8] + 3) begin
+				end else if(stage >= 32'h3 & stage <= instruction[11:8] + 3) begin
 					reg_addr1 = stage[3:0] - 2'd2;
 
 					alu_cmd = ALU_f_ADD;
@@ -765,6 +740,31 @@ module Chip8_CPU(
 				end else begin
 					//CPU DONE
 				end
+				
+			end
+
+			16'hFx65: begin //Fx65 - LD Vx, [I]
+				//Read registers V0 through Vx from memory starting at location 
+				//I.
+				//The interpreter reads values from memory starting at location 
+				//I into registers V0 through Vx.
+				if(stage == 32'h2) begin
+					mem_addr1 = reg_I_readdata[11:0];
+					mem_request = 1'b1;
+				end else if(stage >= 32'h3 & stage <= instruction[11:8] + 3) begin
+					alu_cmd = ALU_f_ADD;
+					alu_in1 = reg_I_readdata;
+					alu_in2 = stage[15:0] - 2'h3;
+					mem_addr1 = alu_out[11:0];
+					mem_request = 1'b1;
+
+					reg_addr1 = stage[3:0] - 2'h3;
+					reg_writedata1 = mem_readdata1;
+					reg_WE1 = 1'b1;
+				end else begin
+					//CPU DONE
+				end
+				
 			end
 		
 			default : /* default */;
