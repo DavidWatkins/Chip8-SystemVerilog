@@ -565,7 +565,7 @@ module Chip8_CPU(
 
 				if(stage == 32'h2) begin
 					reg_addr1 = instruction[11:8];
-				end else if(key_press != reg_readdata1) begin
+				end else if(key_pressed == 1'h0 || key_press != reg_readdata1) begin
 					pc_src = PC_SRC_SKIP;
 				end else begin
 					//CPU DONE
