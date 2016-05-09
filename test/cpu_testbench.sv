@@ -44,7 +44,73 @@ task automatic test00EE(ref logic clk,
 			$display ("00EE TEST : PASSED");
 			total = total + 1;
 		end
-		else $error("00EE TEST : FAILED (Got %h, Expected skip)", pc_src);
+		else $error("00EE TEST : FAILED (Got %h, Expected PC_SRC_STACK)", pc_src);
+	
+	testreset(instruction, stage, reg_readdata1, reg_readdata2);
+endtask
+
+//test 1nnn, which sets the progam counter to nnn
+task automatic test1nnn(ref logic clk,
+									ref PC_SRC pc_src,
+									ref logic[15:0] instruction,
+									ref logic[7:0] reg_readdata1, reg_readdata2,
+									ref logic[31:0] stage,
+									ref logic[7:0] reg_writedata1, reg_writedata2,
+									ref logic reg_WE1, reg_WE2,
+									ref logic[3:0] reg_addr1, reg_addr2,
+									ref logic[11:0] PC_writedata,
+									ref int total);
+									
+	repeat(4) @(posedge clk);
+	instruction[15:12] = 4'h1;
+	instruction[11:8] = 4'h2;
+	instruction[7:4] = 4'ha;
+	instruction[3:0] = 4'h6;
+	
+	repeat(2) @(posedge clk);
+	stage = stage + 2;
+	repeat(2) @(posedge clk);
+		assert (pc_src == PC_SRC_ALU && PC_writedata == 12'h2A6) begin
+			$display ("1nnn TEST : PASSED");
+			total = total + 1;
+		end
+		else $error("1nnn TEST : FAILED (Got %h, Expected PC_SRC_ALU)", pc_src);
+	
+	testreset(instruction, stage, reg_readdata1, reg_readdata2);
+endtask
+
+//test 2nnn, which sets the progam counter to nnn and pushes the current value to the stack
+task automatic test2nnn(ref logic clk,
+									ref PC_SRC pc_src,
+									ref logic[15:0] instruction,
+									ref logic[7:0] reg_readdata1, reg_readdata2,
+									ref logic[31:0] stage,
+									ref logic[7:0] reg_writedata1, reg_writedata2,
+									ref logic reg_WE1, reg_WE2,
+									ref logic[3:0] reg_addr1, reg_addr2,
+									ref logic[11:0] PC_writedata,
+									ref logic[11:0] PC_readdata,
+									ref STACK_OP stk_op, 
+									ref logic[15:0] stk_writedata,
+									ref int total);
+									
+	repeat(4) @(posedge clk);
+	instruction[15:12] = 4'h2;
+	instruction[11:8] = 4'h0;
+	instruction[7:4] = 4'h4;
+	instruction[3:0] = 4'h2;
+	
+	repeat(2) @(posedge clk);
+	stage = stage + 2;
+	PC_readdata = 12'h413;
+	repeat(2) @(posedge clk);
+	stage = stage + 1;
+	repeat(2) @(posedge clk);
+		assert (pc_src == PC_SRC_ALU && PC_writedata == 12'h042 && stk_op == STACK_PUSH && stk_writedata == 12'h413) begin
+			$display ("2nnn TEST : PASSED");
+			total = total + 1;
+		end
+		else $error("2nnn TEST : FAILED (Got %h , %h, %h, %h, Expected PC_SRC_ALU, 042, STACK_PUSH, 00413)", pc_src, PC_writedata, stk_op, stk_writedata);
 	
 	testreset(instruction, stage, reg_readdata1, reg_readdata2);
 endtask
@@ -1053,6 +1119,11 @@ module cpu_testbench();
 		$display("Starting test script...");
 		test00EE(cpu_clk, pc_src, instruction, reg_readdata1, reg_readdata2, stage, 
 			reg_writedata1, reg_writedata2, reg_WE1, reg_WE2, reg_addr1, reg_addr2, stk_op, total);
+		test1nnn(cpu_clk, pc_src, instruction, reg_readdata1, reg_readdata2, stage, 
+			reg_writedata1, reg_writedata2, reg_WE1, reg_WE2, reg_addr1, reg_addr2, PC_writedata, total);
+		test2nnn(cpu_clk, pc_src, instruction, reg_readdata1, reg_readdata2, stage, 
+			reg_writedata1, reg_writedata2, reg_WE1, reg_WE2, reg_addr1, reg_addr2, PC_writedata,
+			PC_readdata, stk_op, stk_writedata, total);
 		test3xkk_part1(cpu_clk, pc_src, instruction, reg_readdata1, reg_readdata2, stage, 
 			reg_writedata1, reg_writedata2, reg_WE1, reg_WE2, reg_addr1, reg_addr2, total);
 		test3xkk_part2(cpu_clk, pc_src, instruction, reg_readdata1, reg_readdata2, stage, 

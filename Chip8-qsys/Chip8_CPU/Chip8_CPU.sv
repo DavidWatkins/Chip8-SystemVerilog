@@ -181,8 +181,7 @@ module Chip8_CPU(
 				//Call subroutine at nnn.
 				//The interpreter increments the stack pointer, then puts the
 				//current PC on the top of the stack. The PC is then set to nnn.
-
-				if(stage == 32'h3) begin
+				if(stage == 32'h3 || stage == 32'h4) begin
 					stk_op = STACK_PUSH;
 					stk_writedata = PC_readdata;
 					pc_src = PC_SRC_ALU;
