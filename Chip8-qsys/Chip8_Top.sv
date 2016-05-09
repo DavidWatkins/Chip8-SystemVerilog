@@ -390,13 +390,12 @@
                     if(cpu_mem_WE2) begin
                         memwritedata2 <= cpu_mem_writedata2;
                         memWE2 <= 1'b1;
-								mem_addr2 <= cpu_mem_addr2;
+								memaddr2 <= cpu_mem_addr2;
                     end else begin
                         memWE2 <= 1'b0;
                     end
 
                     if(cpu_reg_I_WE) begin
-								reg_I_WE = cpu_reg_I_WE;
                         I <= cpu_reg_I_writedata;
                     end
 
