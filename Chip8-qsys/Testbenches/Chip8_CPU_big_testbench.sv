@@ -489,7 +489,7 @@ module Chip8_CPU_big_testbench( ) ;
 	STACK_OP stk_op;
 	logic[15:0] stk_writedata;
 	logic bit_overwritten;
-	
+	logic mem_request;
 	
 	int total = 0;
 	int failed = 0;
