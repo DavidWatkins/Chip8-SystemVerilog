@@ -17,6 +17,38 @@
 	
 endtask
 
+//test 00EE, which returns from a subroutine by setting the progam counter to the address from the stack
+task automatic test00EE(ref logic clk,
+									ref PC_SRC pc_src,
+									ref logic[15:0] instruction,
+									ref logic[7:0] reg_readdata1, reg_readdata2,
+									ref logic[31:0] stage,
+									ref logic[7:0] reg_writedata1, reg_writedata2,
+									ref logic reg_WE1, reg_WE2,
+									ref logic[3:0] reg_addr1, reg_addr2,
+									STACK_OP stk_op,
+									ref int total);
+									
+	repeat(4) @(posedge clk);
+	instruction[15:12] = 4'h0;
+	instruction[11:8] = 4'h0;
+	instruction[7:4] = 4'hE;
+	instruction[3:0] = 4'hE;
+	
+	repeat(2) @(posedge clk);
+	stage = stage + 2;
+	repeat(2) @(posedge clk);
+	stage = stage + 1;
+	repeat(2) @(posedge clk);
+		assert (pc_src == PC_SRC_STACK && stk_op == STACK_POP) begin
+			$display ("00EE TEST : PASSED");
+			total = total + 1;
+		end
+		else $error("00EE TEST : FAILED (Got %h, Expected skip)", pc_src);
+	
+	testreset(instruction, stage, reg_readdata1, reg_readdata2);
+endtask
+
 //test 3xkk, which skips the next instruction if Vx = kk
 task automatic test3xkk_part1(ref logic clk,
 									ref PC_SRC pc_src,
@@ -972,6 +1004,7 @@ module cpu_testbench();
 	logic mem_WE1, mem_WE2;
 	logic[11:0] mem_addr1, mem_addr2;
 	logic[ 7:0] mem_writedata1, mem_writedata2;
+	logic mem_request;
 	
 	logic reg_I_WE;
 	logic[15:0] reg_I_writedata;
@@ -986,6 +1019,9 @@ module cpu_testbench();
 							fb_WE, //enable writing to address
 							fbreset,
 							bit_overwritten;
+							
+	logic isDrawing;
+							
 	logic halt_for_keypress;
 	
 	int total;
@@ -1015,6 +1051,8 @@ module cpu_testbench();
 	
 	initial begin
 		$display("Starting test script...");
+		test00EE(cpu_clk, pc_src, instruction, reg_readdata1, reg_readdata2, stage, 
+			reg_writedata1, reg_writedata2, reg_WE1, reg_WE2, reg_addr1, reg_addr2, stk_op, total);
 		test3xkk_part1(cpu_clk, pc_src, instruction, reg_readdata1, reg_readdata2, stage, 
 			reg_writedata1, reg_writedata2, reg_WE1, reg_WE2, reg_addr1, reg_addr2, total);
 		test3xkk_part2(cpu_clk, pc_src, instruction, reg_readdata1, reg_readdata2, stage, 
