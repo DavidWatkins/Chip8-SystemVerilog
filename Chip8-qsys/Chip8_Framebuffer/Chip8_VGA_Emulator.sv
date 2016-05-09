@@ -96,7 +96,11 @@
 	parameter bottom_bound = 9'd368;
 	
 	logic[11:0] fb_pos;
-	assign fb_request_addr = (((vcount[8:0] - top_bound) >> (4'd3))*(7'd64)) + ((hcount[10:1] - left_bound) >> (4'd3));
+	assign fb_request_addr = ((((vcount[8:0] - top_bound) & (8'b1111_1000)) << (4'd3)) + ((hcount[10:1] - left_bound) >> (4'd3)));
+								//(((vcount[8:0] - top_bound) >> (4'd3))*(7'd64)) + ((hcount[10:1] - left_bound) >> (4'd3));
+								//this commented out line is the old code (which was believed to work). New code is more efficient
+								//in area and time. Hopefully this helps if we have a too long critical path
+									 
 
 	logic inChip;
    	//120 <= Y-dim < 360

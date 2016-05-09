@@ -179,10 +179,10 @@
     end else if(chipselect) begin
 
         chipselect_happened <= 1'b1;
-        case (address) 
+        casex (address) 
 
 				//Read/write from register
-				inbetween(18'h0, address, 18'hF) : begin
+				 18'b00_0000_0000_0000_xxxx: begin
                     reg_addr1 <= address[3:0];
                     data_out <= {24'h0, reg_readdata1};
                     if(write) begin
@@ -191,19 +191,19 @@
                    end
                end
 
-               18'h10 : begin
+				18'h10 : begin
                 if(write) I <= writedata[15:0];
                 data_out <= {16'b0, I};
             end
 
 				//Read/write to sound_timer
 				18'h11 : begin
-                    data_out <= {24'h0, sound_timer_output_data};
-                    if(write) begin
-                       sound_timer_write_enable <= 1'b1;
-                       sound_timer_data <= writedata[7:0];
-                   end 
-               end
+					data_out <= {24'h0, sound_timer_output_data};
+					if(write) begin
+						sound_timer_write_enable <= 1'b1;
+						sound_timer_data <= writedata[7:0];
+					end 
+				end
 
 				//Read/write to delay_timer
 				18'h12 : begin
@@ -230,10 +230,10 @@
 				18'h15 : begin 
 					data_out <= {27'b0, ispressed, key};
 					if(write) begin
-                        ispressed <= writedata[4];
-                        key <= writedata[3:0];
-                    end
-                end
+						ispressed <= writedata[4];
+						key <= writedata[3:0];
+					end
+				end
 
 				//Read/write the state of the emulator
 				18'h16 : begin
@@ -377,22 +377,6 @@
                     end else begin
                         regWE2 <= 1'b0;
                         reg_addr2 <= cpu_reg_addr2;
-                    end
-
-                    if(cpu_mem_WE1) begin
-                        memwritedata1 <= cpu_mem_writedata1;
-                        memWE1 <= 1'b1;
-								memaddr1 <= cpu_mem_addr1;
-                    end else begin
-                        memWE1 <= 1'b0;
-                    end
-
-                    if(cpu_mem_WE2) begin
-                        memwritedata2 <= cpu_mem_writedata2;
-                        memWE2 <= 1'b1;
-								memaddr2 <= cpu_mem_addr2;
-                    end else begin
-                        memWE2 <= 1'b0;
                     end
 
                     if(cpu_reg_I_WE) begin
