@@ -157,7 +157,7 @@ module Chip8_CPU(
 				//Return from a subroutine.
 				//The interpreter sets the program counter to the address at the
 				//top of the stack, then subtracts 1 from the stack pointer.
-				if(stage == 32'h3) begin
+				if(stage == 32'h3 || stage == 32'h4) begin //two stages b/c stack takes two cycles
 					stk_op = STACK_POP;
 					pc_src = PC_SRC_STACK;
 				end else begin
@@ -180,8 +180,7 @@ module Chip8_CPU(
 				//Call subroutine at nnn.
 				//The interpreter increments the stack pointer, then puts the
 				//current PC on the top of the stack. The PC is then set to nnn.
-
-				if(stage == 32'h3) begin
+				if(stage == 32'h3 || stage == 32'h4) begin
 					stk_op = STACK_PUSH;
 					stk_writedata = PC_readdata;
 					pc_src = PC_SRC_ALU;
