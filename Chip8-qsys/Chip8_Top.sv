@@ -56,7 +56,7 @@
     logic [11:0] next_pc;
     logic [31:0] stage;
     logic        halt_for_keypress;
-
+    logic [31:0] last_stage;
     //Framebuffer values
     logic		fbreset;
 	logic [4:0]	fb_addr_y;//max val = 31
@@ -138,6 +138,57 @@
     logic [11:0] mem_addr_prev;
     logic        chipselect_happened;
 
+    //DRAWING
+    logic [31:0] stageminus3;
+    assign stageminus3 = stage - 3;
+    logic [2:0] index;
+    assign index = stageminus3[4:2]; 
+    logic [31:0] num_rows_written;
+    assign num_rows_written = stageminus3 >> 5;
+
+    logic [7:0] fbx_truncated, fby_truncated;
+    assign fbx_truncated = reg_readdata1 + ({5'b0, index[2:0]});
+    assign fby_truncated = reg_readdata2 + ({4'b0, num_rows_written[3:0]});
+
+    initial begin
+        pc <= 12'h200;
+
+        last_stage <= 32'h0;
+        memWE1 <= 1'b0;
+        memWE2 <= 1'b0;
+        cpu_instruction <= 16'h0;
+        delay_timer_write_enable <= 1'b0;
+        sound_timer_write_enable <= 1'b0;
+        I <= 16'h0;
+        regWE1 <= 1'b0;
+        regWE2 <= 1'b0;
+
+        fbreset <= 1'b0;
+        fb_addr_y <= 5'b0;
+        fb_addr_x <= 6'b0;
+        fb_writedata <= 1'b0; 
+        fb_WE <= 1'b0;
+
+        stack_op <= STACK_HOLD;
+
+        state <= Chip8_PAUSED;
+        cpu_instruction <= 16'h0;
+        stage <= 32'h0;
+
+        stack_reset <= 1'b1;
+
+        fbvx_prev <= 6'h0;
+        fbvy_prev <= 5'h0;
+        mem_addr_prev <= 12'h0;
+
+        sound_on <= 1'b0;
+        chipselect_happened <= 1'b0;
+
+        fb_paused <= 1'b1;
+
+        halt_for_keypress <= 1'b0;
+    end
+
     always_ff @(posedge clk) begin
         if(reset) begin
             //Add initial values for code
@@ -175,82 +226,84 @@
 
             fb_paused <= 1'b1;
 
+            halt_for_keypress <= 1'b0;
+
         //Handle input from the ARM processor
     end else if(chipselect) begin
 
         chipselect_happened <= 1'b1;
         casex (address) 
 
-				//Read/write from register
-				 18'b00_0000_0000_0000_xxxx: begin
+    			//Read/write from register
+                18'b00_0000_0000_0000_xxxx: begin
                     reg_addr1 <= address[3:0];
                     data_out <= {24'h0, reg_readdata1};
                     if(write) begin
-                       regWE1 <= 1'b1;
-                       reg_writedata1 <= writedata[7:0];
-                   end
-               end
+                        regWE1 <= 1'b1;
+                        reg_writedata1 <= writedata[7:0];
+                    end
+                end
 
-				18'h10 : begin
-                if(write) I <= writedata[15:0];
-                data_out <= {16'b0, I};
-            end
+                18'h10 : begin
+                    if(write) 
+                        I <= writedata[15:0];
+                    data_out <= {16'b0, I};
+                end
 
-				//Read/write to sound_timer
-				18'h11 : begin
-					data_out <= {24'h0, sound_timer_output_data};
-					if(write) begin
-						sound_timer_write_enable <= 1'b1;
-						sound_timer_data <= writedata[7:0];
-					end 
-				end
+    			//Read/write to sound_timer
+    			18'h11 : begin
+    				data_out <= {24'h0, sound_timer_output_data};
+    				if(write) begin
+    					sound_timer_write_enable <= 1'b1;
+    					sound_timer_data <= writedata[7:0];
+    				end 
+    			end
 
-				//Read/write to delay_timer
-				18'h12 : begin
+    			//Read/write to delay_timer
+    			18'h12 : begin
                     data_out <= {24'h0, delay_timer_output_data};
-                    if(write) begin
-                       delay_timer_write_enable <= 1'b1;
-                       delay_timer_data <= writedata[7:0];
-                   end
-               end
+                    if(write) begin 
+                     delay_timer_write_enable <= 1'b1;
+                     delay_timer_data <= writedata[7:0];
+                 end
+             end
 
-				//Read/write to stack pointer
-				18'h13 : begin
-					$display("READ/WRITE TO STACK POINTER NOT IMPLEMENTED");
-					data_out <= 32'h13;
-				end
+    			//Read/write to stack pointer
+    			18'h13 : begin
+    				$display("READ/WRITE TO STACK POINTER NOT IMPLEMENTED");
+    				data_out <= 32'h13;
+    			end
 
-				//Read/write to program counter
-				18'h14 : begin 
-					data_out <= {4'h0, cpu_instruction, pc};
-					if(write) pc <= writedata[11:0]; //0-4095
-				end
+    			//Read/write to program counter
+    			18'h14 : begin 
+    				data_out <= {4'h0, cpu_instruction, pc};
+    				if(write) pc <= writedata[11:0]; //0-4095
+    			end
 
-				//Read/write key presses
-				18'h15 : begin 
-					data_out <= {27'b0, ispressed, key};
-					if(write) begin
-						ispressed <= writedata[4];
-						key <= writedata[3:0];
-					end
-				end
+    			//Read/write key presses
+    			18'h15 : begin 
+    				data_out <= {27'b0, ispressed, key};
+    				if(write) begin
+    					ispressed <= writedata[4];
+    					key <= writedata[3:0];
+    				end
+    			end
 
-				//Read/write the state of the emulator
-				18'h16 : begin
+    			//Read/write the state of the emulator
+    			18'h16 : begin
                     data_out <= state;
                     if(write) begin
                         case (writedata[1:0])
                             2'h0: state <= Chip8_RUNNING;
-                            2'h1: state <= Chip8_LOADING_ROM;
-                            2'h2: state <= Chip8_LOADING_FONT;
-                            2'h3: state <= Chip8_PAUSED;
-                            default : /* default */;
+                            2'h1: state <= Chip8_RUN_INSTRUCTION;
+                            2'h2: state <= Chip8_PAUSED;
+                            default : state <= Chip8_PAUSED;
                         endcase
                     end
                 end
 
-				//Modify framebuffer
-				18'h17 : begin
+    			//Modify framebuffer
+    			18'h17 : begin
                     if(write) begin
                         fbvx_prev <= writedata[10:5];
                         fbvy_prev <= writedata[4:0];
@@ -267,11 +320,11 @@
                     end
                 end
 
-				//Read/write stack
-				18'h18 : begin 
-					$display("READ/WRITE STACK NOT IMPLEMENTED");
-					data_out <= 32'h18;
-				end 
+    			//Read/write stack
+    			18'h18 : begin 
+    				$display("READ/WRITE STACK NOT IMPLEMENTED");
+    				data_out <= 32'h18;
+    			end 
 
                 //MODIFY MEMORY
                 18'h19 : begin
@@ -288,149 +341,186 @@
                     end
                 end
 
+                //Load single instruction
+                18'h1A : begin
+                    if(write) 
+                        cpu_instruction <= writedata[15:0];
+                    data_out <= {stage[15:0], cpu_instruction};
+                    stage <= 32'h0;
+                end
+
                 default: begin
-                 data_out <= 32'd101;
-             end
+                   data_out <= 32'd101;
+               end
 
-         endcase
+           endcase
 
-     end else if(chipselect_happened) begin 
+       end else if(chipselect_happened) begin 
         memWE1 <= 1'b0;
         fb_WE <= 1'b0;
         regWE1 <= 1'b0;
         sound_timer_write_enable <= 1'b0;
         delay_timer_write_enable <= 1'b0;
         chipselect_happened <= 1'b0;
+
+        // fb_addr_x <= fbvx_prev;
+        // fb_addr_y <= fbvy_prev;
+        // memaddr1 <= mem_addr_prev;
     end else begin 
         fb_paused <= state == Chip8_PAUSED;
+            // sound_on <= sound_timer_out;
 
-        case (state)
-            Chip8_RUNNING: begin
-                sound_on <= sound_timer_out;   
-                // memaddr1 <= pc;
-                // memaddr2 <= pc + 12'h1; 
+            case (state)
+                Chip8_RUNNING: begin
+                    sound_on <= sound_timer_out;   
+                    // memaddr1 <= pc;
+                    // memaddr2 <= pc + 12'h1; 
 
-                if(halt_for_keypress) begin
-                    if(ispressed) begin
-                        halt_for_keypress <= 1'b0;
-                    end
-                end else if(stage == 32'h0) begin
-                    memaddr1 <= pc;
-                    memaddr2 <= pc + 12'h1; 
-                    cpu_instruction <= 16'h0;
-
-                    bit_ovewritten <= 1'b0;
-                    is_drawing <= 1'b0;
-
-                    delay_timer_write_enable <= 1'b0;
-                    sound_timer_write_enable <= 1'b0;
-                    regWE1 <= 1'b0;
-                    regWE2 <= 1'b0;
-                    memWE1 <= 1'b0;
-                    memWE2 <= 1'b0;
-                    stack_op <= STACK_HOLD;
-                end else if (stage == 32'h1) begin
-                    memaddr1 <= pc;
-                    memaddr2 <= pc + 12'h1;
-
-                    cpu_instruction[15:8] <= memreaddata1;
-                    cpu_instruction[7:0]  <= memreaddata2;
-                end else if (stage >= 32'h2) begin
-
-                    if(cpu_delay_timer_WE) begin
-                        delay_timer_write_enable <= 1'b1;
-                        delay_timer_data <= cpu_delay_timer_writedata;
-                    end else begin
-                        delay_timer_write_enable <= 1'b0;
-                    end
-
-                    if(cpu_sound_timer_WE) begin
-                        sound_timer_write_enable <= 1'b1;
-                        sound_timer_data <= cpu_sound_timer_writedata;
-                    end else begin
-                        sound_timer_write_enable <= 1'b0;
-                    end
-
-                    if(cpu_reg_WE1) begin
-                        regWE1 <= 1'b1;
-                        reg_writedata1 <= cpu_reg_writedata1;
-                    end else begin
-                        regWE1 <= 1'b0;
-                    end
-
-                    if(cpu_is_drawing) begin
-                        is_drawing <= 1'b1;
-                    end
-
-                    if(cpu_bit_overwritten) begin
-                        bit_ovewritten <= 1'b1;
-                    end
-
-                    if(stage == 32'd30000 && is_drawing) begin
-                        regWE2 <= 1'b1;
-                        reg_writedata2 <= {7'h0, bit_ovewritten};
-                        reg_addr2 <= 4'hF; //Setting VF register to write
-                    end else if(cpu_reg_WE2) begin
-                        regWE2 <= 1'b1;
-                        reg_writedata2 <= cpu_reg_writedata2;
-                        reg_addr2 <= cpu_reg_addr2;
-                    end else begin
-                        regWE2 <= 1'b0;
-                        reg_addr2 <= cpu_reg_addr2;
-                    end
-
-                    if(cpu_reg_I_WE) begin
-                        I <= cpu_reg_I_writedata;
-                    end
-
-                    if(cpu_stk_op == STACK_PUSH) begin
-                        stack_op <= STACK_PUSH;
-                        stack_writedata <= pc;
-                    end 
-
-                    //next_pc modified on 4th stage only
-                    if(stage == 32'h3) begin
-                        if(cpu_stk_op == STACK_POP) begin
-                            stack_op <= STACK_POP;
-                            next_pc <= stack_outdata[11:0];
-                        end else begin
-                            case (cpu_pc_src)
-                                PC_SRC_ALU  : next_pc <= cpu_PC_writedata;
-                                PC_SRC_SKIP : next_pc <= pc + 12'd4;
-                                PC_SRC_NEXT : next_pc <= pc + 12'd2;
-                                default : next_pc <= pc /*default next_pc <= pc + 12'd2*/;
-                            endcase
+                    if(halt_for_keypress) begin
+                        if(ispressed) begin
+                            halt_for_keypress <= 1'b0;
                         end
-                    end
-
-                    if(cpu_fbreset) begin
-                        fbreset <= 1'b1;
-                    end else begin
-                        fbreset <= 1'b0;
-                    end
-
-                    if(cpu_fb_WE) begin
-                        fb_writedata <= cpu_fb_writedata;
-                        fb_WE <= cpu_fb_WE;
-                    end else begin
-                        fb_WE <= 1'b0;   
-                    end   
-
-                    if(cpu_halt_for_keypress & !ispressed) begin
-                        halt_for_keypress <= 1'b1;
-                    end                     
-
-                    if(cpu_mem_request) begin
-                        memaddr1 <= cpu_mem_addr1;
-                        memaddr2 <= cpu_mem_addr2;
-								memwritedata1 <= cpu_mem_writedata1;
-								memwritedata2 <= cpu_mem_writedata2;
-								memWE1 <= cpu_mem_WE1;
-								memWE2 <= cpu_mem_WE2;
-                    end else begin
+                    end else if(stage == 32'h0) begin
                         memaddr1 <= pc;
                         memaddr2 <= pc + 12'h1; 
-                    end
+                        cpu_instruction <= 16'h0;
+
+                        bit_ovewritten <= 1'b0;
+                        is_drawing <= 1'b0;
+
+                        delay_timer_write_enable <= 1'b0;
+                        sound_timer_write_enable <= 1'b0;
+                        regWE1 <= 1'b0;
+                        regWE2 <= 1'b0;
+                        memWE1 <= 1'b0;
+                        memWE2 <= 1'b0;
+                        stack_op <= STACK_HOLD;
+                    end else if (stage == 32'h1) begin
+                        memaddr1 <= pc;
+                        memaddr2 <= pc + 12'h1;
+                        cpu_instruction <= {memreaddata1, memreaddata2};
+                        last_stage <= stage;
+                    end else if (cpu_instruction[15:12] == 4'hd && stage >= 32'h2 && stage < 32'd10000) begin
+                        last_stage <= stage;
+
+                        //DRAWING
+                        reg_addr1 <= cpu_instruction[11:8];
+                        reg_addr2 <= cpu_instruction[ 7:4];
+
+                        if(stage >= 32'h3) begin
+                            memaddr1 <= I[11:0] + {8'b0, num_rows_written[3:0]};
+                            fb_WE <= (num_rows_written < {28'h0, cpu_instruction[3:0]}) & (stageminus3[1:0] == 2'b10);
+
+                            fb_addr_x <= fbx_truncated[5:0];
+                            fb_addr_y <= fby_truncated[4:0];
+                            fb_writedata <= memreaddata1[index] ^ fb_readdata;
+                        end
+                        //bit_overwritten goes high whenever a pixel is set from 1 to 0
+                        //END DRAWING
+                    end else if (stage >= 32'h2) begin
+                        last_stage <= stage;
+                        if(cpu_delay_timer_WE) begin
+                            delay_timer_write_enable <= 1'b1;
+                            delay_timer_data <= cpu_delay_timer_writedata;
+                        end else begin
+                            delay_timer_write_enable <= 1'b0;
+                        end
+
+                        if(cpu_sound_timer_WE) begin
+                            sound_timer_write_enable <= 1'b1;
+                            sound_timer_data <= cpu_sound_timer_writedata;
+                        end else begin
+                            sound_timer_write_enable <= 1'b0;
+                        end
+
+                        if(cpu_reg_WE1) begin
+                            regWE1 <= 1'b1;
+                            reg_writedata1 <= cpu_reg_writedata1;
+                        end else begin
+                            regWE1 <= 1'b0;
+                        end
+
+                        if(cpu_is_drawing) begin
+                            is_drawing <= 1'b1;
+                        end
+
+                        if(cpu_bit_overwritten) begin
+                            bit_ovewritten <= 1'b1;
+                        end
+
+                        if(stage == 32'd30000 && is_drawing) begin
+                            regWE2 <= 1'b1;
+                            reg_writedata2 <= {7'h0, bit_ovewritten};
+                            reg_addr2 <= 4'hF; //Setting VF register to write
+                        end else if(cpu_reg_WE2) begin
+                            regWE2 <= 1'b1;
+                            reg_writedata2 <= cpu_reg_writedata2;
+                            reg_addr2 <= cpu_reg_addr2;
+                        end else begin
+                            regWE2 <= 1'b0;
+                            reg_addr2 <= cpu_reg_addr2;
+                        end
+
+                        if(cpu_mem_WE1) begin
+                            memwritedata1 <= cpu_mem_writedata1;
+                            memWE1 <= 1'b1;
+                        end else begin
+                            memWE1 <= 1'b0;
+                        end
+
+                        if(cpu_mem_WE2) begin
+                            memwritedata2 <= cpu_mem_writedata2;
+                            memWE2 <= 1'b1;
+                        end else begin
+                            memWE2 <= 1'b0;
+                        end
+
+                        if(cpu_reg_I_WE) begin
+                            I <= cpu_reg_I_writedata;
+                        end
+
+                        if(cpu_stk_op == STACK_PUSH) begin
+                            stack_op <= STACK_PUSH;
+                            stack_writedata <= pc;
+                        end 
+
+                        //next_pc modified on 4th stage only
+                        if(stage == 32'h3) begin
+                            if(cpu_stk_op == STACK_POP) begin
+                                stack_op <= STACK_POP;
+                                next_pc <= stack_outdata[11:0];
+                            end else begin
+                                case (cpu_pc_src)
+                                    PC_SRC_ALU  : next_pc <= cpu_PC_writedata;
+                                    PC_SRC_SKIP : next_pc <= pc + 12'd4;
+                                    PC_SRC_NEXT : next_pc <= pc + 12'd2;
+                                    default : next_pc <= pc /*default next_pc <= pc + 12'd2*/;
+                                endcase
+                            end
+                        end
+
+                        // if(cpu_fbreset) begin
+                        //     fbreset <= 1'b1;
+                        // end else begin
+                        //     fbreset <= 1'b0;
+                        // end
+
+                        // if(cpu_fb_WE) begin
+                        //     fb_writedata <= cpu_fb_writedata;
+                        //     fb_WE <= cpu_fb_WE;
+                        // end else begin
+                        //     fb_WE <= 1'b0;   
+                        // end   
+
+                        if(cpu_halt_for_keypress & !ispressed) begin
+                            halt_for_keypress <= 1'b1;
+                        end                     
+
+                        if(cpu_mem_request) begin
+                            memaddr1 <= cpu_mem_addr1;
+                            memaddr2 <= cpu_mem_addr2;
+                        end 
+
                         //Always
                         reg_addr1 <= cpu_reg_addr1;
                         fb_addr_x <= cpu_fb_addr_x;
@@ -444,17 +534,22 @@
                         if(stage >= 32'd200000) begin
                             stage <= 32'h0;
                             pc <= next_pc;
+                        end else if (stage == 32'h1) begin
+                            if(stage == last_stage) stage <= 32'h2;
+                            else stage <= 32'h1;
+                        end else if(stage == 32'h2) begin
+                            if(stage == last_stage) stage <= 32'h3;
+                            else stage <= 32'h2;
                         end else begin
                             stage <= stage + 32'h1;
                         end
                     end
                 end
-                Chip8_LOADING_ROM: begin
-                end
-                Chip8_LOADING_FONT: begin
+                Chip8_RUN_INSTRUCTION: begin
+                    sound_on <= 1'b1;
                 end
                 Chip8_PAUSED: begin
-                    sound_on <= 1'b1;
+                    // sound_on <= 1'b1;
                 end
                 default : /* default */;
             endcase
