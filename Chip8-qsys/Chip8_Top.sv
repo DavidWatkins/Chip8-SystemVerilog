@@ -138,6 +138,20 @@
     logic [11:0] mem_addr_prev;
     logic        chipselect_happened;
 
+    //Chipselect temporary values
+    logic [3:0] chip_reg_addr1_prev;
+    logic       chip_regWE1_prev;
+    logic [15:0]chip_reg_writedata1_prev;
+    logic [5:0] chip_fb_addr_x_prev;
+    logic [4:0] chip_fb_addr_y_prev;
+    logic       chip_fb_writedata_prev;
+    logic       chip_fb_WE_prev;
+    logic [11:0]chip_memaddr1_prev;
+    logic       chip_memWE1_prev;
+    logic [7:0] chip_memwritedata1_prev;
+    logic       chip_sound_timer_write_enable_prev;
+    logic       chip_delay_timer_write_enable_prev;
+
     initial begin
         pc <= 12'h200;
 
@@ -220,6 +234,22 @@
     end else if(chipselect) begin
 
         chipselect_happened <= 1'b1;
+
+        if(~chipselect_happened) begin
+            chip_sound_timer_write_enable_prev <= sound_timer_write_enable;
+            chip_delay_timer_write_enable_prev <= delay_timer_write_enable;
+            chip_reg_addr1_prev <= reg_addr1;
+            chip_regWE1_prev <= regWE1;
+            chip_reg_writedata1_prev <= reg_writedata1;
+            chip_fb_addr_x_prev <= fb_addr_x;
+            chip_fb_addr_y_prev <= fb_addr_y;
+            chip_fb_writedata_prev <= fb_writedata;
+            chip_fb_WE_prev <= fb_WE;
+            chip_memaddr1_prev <= memaddr1;
+            chip_memWE1_prev <= memWE1;
+            chip_memwritedata1_prev <= memwritedata1;
+        end
+
         casex (address) 
 
     			//Read/write from register
@@ -343,27 +373,28 @@
 
            endcase
 
-       end else if(chipselect_happened) begin 
-        memWE1 <= 1'b0; 
-		  fb_WE <= 1'b0; 
-		  regWE1 <= 1'b0; 
-		  sound_timer_write_enable <= 1'b0; 
-		  delay_timer_write_enable <= 1'b0; 
-		  chipselect_happened <= 1'b0; 
-		  stack_reset <= 1'b0;
+        end else if(chipselect_happened) begin 
+		    // sound_timer_write_enable <= chip_sound_timer_write_enable_prev; 
+		    // delay_timer_write_enable <= chip_delay_timer_write_enable_prev; 
+      //       reg_addr1 <= chip_reg_addr1_prev;
+      //       regWE1 <= chip_regWE1_prev;
+      //       reg_writedata1 <= chip_reg_writedata1_prev;
+      //       fb_addr_x <= chip_fb_addr_x_prev;
+      //       fb_addr_y <= chip_fb_addr_y_prev;
+      //       fb_writedata <= chip_fb_writedata_prev;
+      //       fb_WE <= chip_fb_WE_prev;
+      //       memaddr1 <= chip_memaddr1_prev;
+      //       memWE1 <= chip_memWE1_prev;
+      //       memwritedata1 <= chip_memwritedata1_prev;
 
-        // fb_addr_x <= fbvx_prev;
-        // fb_addr_y <= fbvy_prev;
-        // memaddr1 <= mem_addr_prev;
-    end else begin 
-        fb_paused <= state == Chip8_PAUSED;
-            // sound_on <= sound_timer_out;
+            chipselect_happened <= 1'b0; 
+            stack_reset <= 1'b0;
+        end else begin 
+            fb_paused <= state == Chip8_PAUSED;
 
             case (state)
                 Chip8_RUNNING: begin
                     sound_on <= sound_timer_out;   
-                    // memaddr1 <= pc;
-                    // memaddr2 <= pc + 12'h1; 
 
                     if(halt_for_keypress) begin
                         if(ispressed) begin
@@ -433,22 +464,6 @@
                             reg_addr2 <= cpu_reg_addr2;
                         end
 
-								/*
-                        if(cpu_mem_WE1) begin
-                            memwritedata1 <= cpu_mem_writedata1;
-                            memWE1 <= 1'b1;
-                        end else begin
-                            memWE1 <= 1'b0;
-                        end
-
-                        if(cpu_mem_WE2) begin
-                            memwritedata2 <= cpu_mem_writedata2;
-                            memWE2 <= 1'b1;
-                        end else begin
-                            memWE2 <= 1'b0;
-                        end
-								*/
-
                         if(cpu_reg_I_WE) begin
                             I <= cpu_reg_I_writedata;
                         end
@@ -472,12 +487,6 @@
                                 endcase
                             end
                         end
-
-                        // if(cpu_fbreset) begin
-                        //     fbreset <= 1'b1;
-                        // end else begin
-                        //     fbreset <= 1'b0;
-                        // end
 
                         if(cpu_fb_WE) begin
                             fb_writedata <= cpu_fb_writedata;
@@ -527,7 +536,7 @@
                     end
                 end
                 Chip8_RUN_INSTRUCTION: begin
-                    sound_on <= 1'b1;
+                    // sound_on <= 1'b1;
                 end
                 Chip8_PAUSED: begin
                     // sound_on <= 1'b1;

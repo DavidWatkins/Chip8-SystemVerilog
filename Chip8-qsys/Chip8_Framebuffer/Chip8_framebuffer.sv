@@ -43,6 +43,48 @@ module Chip8_framebuffer(
 	wire fb_readdata_vga;
 	assign fb_readdata = fb_readdata_general;
 	
+	logic[10:0] counter;
+
+	initial begin
+		counter = 18'b0;
+	end
+	
+	wire[10:0] copy_addr;
+	wire copy_data;
+	wire copyWE;
+	wire deadwire;
+
+	logic [31:0] fb_stage;
+	logic [31:0] time_since_last_copy;
+
+	initial begin
+		time_since_last_copy <= 32'h0;
+		fb_stage <= 32'h0;
+	end
+
+	always_ff @(posedge clk) begin
+		if(fb_WE) begin
+			fb_stage <= 32'h0;
+		end else if(fb_stage < FRAMEBUFFER_REFRESH_HOLD) begin
+			fb_stage <= fb_stage;
+		end else begin
+			fb_stage <= fb_stage + 32'h1;
+		end
+	end
+	
+	always_ff @(posedge clk) begin
+		if(fb_stage >= FRAMEBUFFER_REFRESH_HOLD || time_since_last_copy > COPY_THRESHOLD) begin
+			counter <= counter + 1;
+			
+			copyWE <= 1'b1;
+			copy_addr <= counter;
+			time_since_last_copy <= 32'h0;
+		end else begin
+			copyWE <= 1'b0;
+			time_since_last_copy <= time_since_last_copy + 32'h1;
+		end
+	end
+	
 	Chip8_VGA_Emulator led_emulator(
 			.clk50(clk),
 			.reset(reset),
@@ -59,16 +101,28 @@ module Chip8_framebuffer(
 			.VGA_SYNC_n(VGA_SYNC_n)
 	);
 	
-	Framebuffer fbmem (
+	Framebuffer from_cpu (
 			.clock(clk),
 			.address_a(fb_addr_general),
-			.address_b(fb_addr_vga),
+			.address_b(copy_addr),
 			.data_a(fb_writedata_general),
 			.data_b(fb_writedata_vga),
 			.wren_a(fb_WE_general),
 			.wren_b(fb_WE_vga),
 			.q_a(fb_readdata_general),
-			.q_b(fb_readdata_vga)
+			.q_b(copy_data)
+	);
+	
+	Framebuffer toscreen (
+			.clock(clk),
+			.address_a(fb_addr_vga),
+			.address_b(copy_addr),
+			.data_a(fb_writedata_vga),
+			.data_b(copy_data),
+			.wren_a(fb_WE_vga),
+			.wren_b(copyWE),
+			.q_a(fb_readdata_vga),
+			.q_b(deadwire)
 	);
 	
 				 

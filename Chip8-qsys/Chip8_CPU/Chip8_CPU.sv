@@ -229,7 +229,7 @@ module Chip8_CPU(
 				//they are equal, increments the program counter by 2.
 				if(stage >= 32'h3 & stage <= NEXT_PC_WRITE_STAGE) begin
 					reg_addr1 = instruction[11:8];
-					reg_addr1 = instruction[ 7:4];
+					reg_addr2 = instruction[ 7:4];
 					if(reg_readdata1 == reg_readdata2) pc_src = PC_SRC_SKIP;
 					else pc_src = PC_SRC_NEXT;
 				end
@@ -254,9 +254,9 @@ module Chip8_CPU(
 				//Set Vx = Vx + kk.
 				//Adds the value kk to the value of register Vx, then stores the
 				//result in Vx. 
-				if(stage >= 32'h2 & stage <= 32'h4) begin
+				if(stage >= 32'h2 & stage <= 32'h6) begin
 					reg_addr1 = instruction[11:8];
-				end else if(stage == 32'h5) begin
+				end else if(stage == 32'h7) begin
 					reg_addr1 = instruction[11:8];
 					reg_writedata1 = alu_out[7:0];
 					reg_WE1 = 1'b1;
@@ -404,8 +404,6 @@ module Chip8_CPU(
 							//Vx is subtracted from Vy, and the results stored 
 							//in Vx.
 
-							reg_addr1 = instruction[11:8];
-
 							alu_cmd = ALU_f_MINUS;
 							alu_in1 = reg_readdata2;
 							alu_in2 = reg_readdata1;
@@ -453,7 +451,7 @@ module Chip8_CPU(
 
 				if(stage >= 32'h3 & stage <= NEXT_PC_WRITE_STAGE) begin
 					reg_addr1 = instruction[11:8];
-					reg_addr1 = instruction[ 7:4];
+					reg_addr2 = instruction[ 7:4];
 					if(reg_readdata1 != reg_readdata2) pc_src = PC_SRC_SKIP;
 					else pc_src = PC_SRC_NEXT;
 				end
@@ -476,8 +474,9 @@ module Chip8_CPU(
 			16'hBxxx: begin //Bnnn - JP V0, addr
 				//Jump to location nnn + V0.
 				//The program counter is set to nnn plus the value of V0.
-				if(stage >= 32'h3 & stage <= NEXT_PC_WRITE_STAGE) begin
-					PC_writedata = instruction[11:0];
+				if(stage >= 32'h2 & stage <= NEXT_PC_WRITE_STAGE) begin
+					reg_addr1 = 4'h0;
+					PC_writedata = instruction[11:0] + {4'h0, reg_readdata1};
 					pc_src = PC_SRC_ALU;
 				end
 			end
@@ -561,10 +560,11 @@ module Chip8_CPU(
 				//Checks the keyboard, and if the key corresponding to the value 
 				//of Vx is currently in the down position, PC is increased by 2.
 
-				if(stage >= 32'h2 & stage <= NEXT_PC_WRITE_STAGE && key_pressed && key_press == reg_readdata1) begin
+				if(stage >= 32'h2 & stage <= NEXT_PC_WRITE_STAGE) begin
 					reg_addr1 = instruction[11:8];
-					pc_src = PC_SRC_SKIP;
-					//CPU DONE
+					if(key_pressed && key_press == reg_readdata1) begin
+						pc_src = PC_SRC_SKIP;
+					end
 				end else begin
 					//CPU DONE
 				end
@@ -576,10 +576,12 @@ module Chip8_CPU(
 				//pressed.
 				//Checks the keyboard, and if the key corresponding to the value 
 				//of Vx is currently in the up position, PC is increased by 2.
-
-				if(stage >= 32'h2 & stage <= NEXT_PC_WRITE_STAGE & key_press != reg_readdata1) begin
+				
+				if(stage >= 32'h2 & stage <= NEXT_PC_WRITE_STAGE) begin
 					reg_addr1 = instruction[11:8];
-					pc_src = PC_SRC_SKIP;
+					if(key_pressed && key_press != reg_readdata1) begin
+						pc_src = PC_SRC_SKIP;
+					end
 				end else begin
 					//CPU DONE
 				end
@@ -709,22 +711,15 @@ module Chip8_CPU(
 					to_bcd = reg_readdata1;
 					reg_addr1 = instruction[11:8];
 
-					alu_cmd = ALU_f_ADD;
-					alu_in1 = reg_I_readdata;
-					alu_in2 = 1;
-
-					mem_addr1 = alu_out[11:0];
+					mem_addr1 = reg_I_readdata + 12'h1;
 					mem_request = 1'b1;
 					mem_writedata1 = bcd_tens;
 					mem_WE1 = 1'b1;
 				end else if(stage >= 32'hE & stage <= 32'hF1) begin
 					to_bcd = reg_readdata1;
+					reg_addr1 = instruction[11:8];
 
-					alu_cmd = ALU_f_ADD;
-					alu_in1 = reg_I_readdata;
-					alu_in2 = 2;
-
-					mem_addr1 = alu_out[11:0];
+					mem_addr1 = reg_I_readdata + 12'h2;
 					mem_request = 1'b1;
 					mem_writedata1 = bcd_ones;
 					mem_WE1 = 1'b1;
@@ -748,7 +743,7 @@ module Chip8_CPU(
 					mem_addr1 = alu_out[11:0];
 					mem_request = 1'b1;
 					mem_writedata1 = reg_readdata1;
-					mem_WE1 = &(stage[4:3]);
+					mem_WE1 = &(stage[2:0]);
 					
 				end
 				
@@ -771,7 +766,7 @@ module Chip8_CPU(
 					mem_request = 1'b1;
 
 					reg_writedata1 = mem_readdata1[7:0];
-					reg_WE1 = &(stage[4:3]);
+					reg_WE1 = &(stage[2:0]);
 					
 				end
 			end
