@@ -367,6 +367,45 @@
                     stage <= 32'h0;
                 end
 
+                18'h1B : begin
+                                //Add initial values for code
+                    pc <= 12'h200;
+
+                    memWE1 <= 1'b0;
+                    memWE2 <= 1'b0;
+                    cpu_instruction <= 16'h0;
+                    delay_timer_write_enable <= 1'b0;
+                    sound_timer_write_enable <= 1'b0;
+                    I <= 16'h0;
+                    regWE1 <= 1'b0;
+                    regWE2 <= 1'b0;
+
+                    fbreset <= 1'b0;
+                    fb_addr_y <= 5'b0;
+                    fb_addr_x <= 6'b0;
+                    fb_writedata <= 1'b0; 
+                    fb_WE <= 1'b0;
+
+                    stack_op <= STACK_HOLD;
+
+                    state <= Chip8_PAUSED;
+                    cpu_instruction <= 16'h0;
+                    stage <= 32'h0;
+
+                    stack_reset <= 1'b1;
+
+                    fbvx_prev <= 6'h0;
+                    fbvy_prev <= 5'h0;
+                    mem_addr_prev <= 12'h0;
+
+                    sound_on <= 1'b0;
+                    chipselect_happened <= 1'b0;
+
+                    fb_paused <= 1'b1;
+
+                    halt_for_keypress <= 1'b0;
+                end
+
                 default: begin
                    data_out <= 32'd101;
                end

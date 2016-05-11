@@ -165,4 +165,9 @@ typedef struct {
 */
 #define INSTRUCTION_ADDR 0x68
 
+/**
+ * iowrite RESET_ADDR to reset all internal values
+ */
+#define RESET_ADDR 0x6C
+
 #endif //__CHIP8_DRIVER_H__

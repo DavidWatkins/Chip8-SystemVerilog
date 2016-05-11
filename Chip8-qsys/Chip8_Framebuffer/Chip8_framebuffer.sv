@@ -46,10 +46,11 @@ module Chip8_framebuffer(
 	logic[10:0] counter;
 
 	initial begin
-		counter = 18'b0;
+		counter = 11'b0;
 	end
 	
-	wire[10:0] copy_addr;
+	wire[10:0] copy_from_addr;
+	wire[10:0] copy_to_addr;
 	wire copy_data;
 	wire copyWE;
 	wire deadwire;
@@ -77,11 +78,15 @@ module Chip8_framebuffer(
 			counter <= counter + 1;
 			
 			copyWE <= 1'b1;
-			copy_addr <= counter;
-			time_since_last_copy <= 32'h0;
+
+			copy_from_addr <= counter + 11'h1;
+			copy_to_addr <= counter;
+
+			if(counter == 11'b111_1111_1111) time_since_last_copy <= 32'h0;
 		end else begin
 			copyWE <= 1'b0;
 			time_since_last_copy <= time_since_last_copy + 32'h1;
+			counter <= 11'h0;
 		end
 	end
 	
@@ -104,7 +109,7 @@ module Chip8_framebuffer(
 	Framebuffer from_cpu (
 			.clock(clk),
 			.address_a(fb_addr_general),
-			.address_b(copy_addr),
+			.address_b(copy_from_addr),
 			.data_a(fb_writedata_general),
 			.data_b(fb_writedata_vga),
 			.wren_a(fb_WE_general),
@@ -116,7 +121,7 @@ module Chip8_framebuffer(
 	Framebuffer toscreen (
 			.clock(clk),
 			.address_a(fb_addr_vga),
-			.address_b(copy_addr),
+			.address_b(copy_to_addr),
 			.data_a(fb_writedata_vga),
 			.data_b(copy_data),
 			.wren_a(fb_WE_vga),

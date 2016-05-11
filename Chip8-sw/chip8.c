@@ -336,6 +336,37 @@ void printKeyState() {
 	printf("Is pressed: %d, Key val: %d, raw value: %d\n", (op.readdata & 0x10) >> 4, (op.readdata & 0xf), op.readdata);
 }
 
+void writeReset() {
+	chip8_opcode op;
+	op.addr = RESET_ADDR;
+	chip8_write(&op);
+}
+
+void printStatus(FILE *out, int index) {
+
+	fprintf(out, "Status %d\n", index);
+	if(chip8isPaused()) {
+		fprintf(out, "Paused\n");
+	} else if(chip8isRunning()) {
+		fprintf(out, "Running\n");
+	} else {
+		fprintf(out, "Run Instruction\n");
+	}
+	int pc = readPC();
+	int mem = readMemory(pc);
+	int mem2 = readMemory(pc + 1);
+	fprintf(out, "Program counter is: %d, instruction is: %04x / %04x\n", pc, mem << 4 | mem2, readInstruction());
+	fprintf(out, "I register: %d\n", readIRegister());
+	int i;
+	for(i = 0; i < 0x10; ++i) {
+	fprintf(out, "v%d: %d\n", i, readRegister(i));
+	}
+
+	fprintf(out, "Sound timer: %d\n", readSoundTimer());
+	fprintf(out, "Delay timer: %d\n\n", readDelayTimer());
+}
+
+
 void resetChip8(const char* filename) {
 	//Need to write to registers and all
 	//Reload font set etc.
@@ -359,6 +390,7 @@ void resetChip8(const char* filename) {
 	chip8writekeypress(0, 0);
 	writeSoundTimer(0);
 	writeDelayTimer(0);
+	printStatus(stdout, 0);
 }
 
 /*
@@ -388,30 +420,6 @@ void checkforkeypress(const char *file) {
 	} else {
 		printf("Size mismatch %d %d\n", sizeof(packet), transferred);
 	}
-}
-
-void printStatus(FILE *out, int index) {
-
-	fprintf(out, "Status %d\n", index);
-	if(chip8isPaused()) {
-		fprintf(out, "Paused\n");
-	} else if(chip8isRunning()) {
-		fprintf(out, "Running\n");
-	} else {
-		fprintf(out, "Run Instruction\n");
-	}
-	int pc = readPC();
-	int mem = readMemory(pc);
-	int mem2 = readMemory(pc + 1);
-	fprintf(out, "Program counter is: %d, instruction is: %04x / %04x\n", pc, mem << 4 | mem2, readInstruction());
-	fprintf(out, "I register: %d\n", readIRegister());
-	int i;
-	for(i = 0; i < 0x10; ++i) {
-	fprintf(out, "v%d: %d\n", i, readRegister(i));
-	}
-
-	fprintf(out, "Sound timer: %d\n", readSoundTimer());
-	fprintf(out, "Delay timer: %d\n\n", readDelayTimer());
 }
 
 void *status_thread_f(void *ignored)
@@ -458,7 +466,7 @@ int main(int argc, char** argv)
 		// pthread_create(&status_thread, NULL, status_thread_f, NULL);
 
 		while(chip8isRunning() || chip8isPaused()) {
-			printStatus(stdout, 0);
+			// printStatus(stdout, 0);
 			checkforkeypress(argv[1]);
 			printKeyState();	
 		}

@@ -118,6 +118,7 @@ static int isValidInstruction(unsigned int addr, unsigned int instruction, int i
 		else 		return 2;
 
 		case INSTRUCTION_ADDR: return 1;
+		case RESET_ADDR : return 1;
 
 		default: break;
 	}
