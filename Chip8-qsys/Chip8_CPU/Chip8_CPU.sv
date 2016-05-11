@@ -188,7 +188,7 @@ module Chip8_CPU(
 				//current PC on the top of the stack. The PC is then set to nnn.
 				if(stage >= 32'h3 & stage <= NEXT_PC_WRITE_STAGE) begin
 					stk_op = STACK_PUSH;
-					stk_writedata = PC_readdata;
+					stk_writedata = PC_readdata + 12'h2;
 					pc_src = PC_SRC_ALU;
 					PC_writedata = instruction[11:0];
 				end else begin
@@ -272,10 +272,10 @@ module Chip8_CPU(
 			//memory module fix May 10
 			//Arithmetic operators
 			16'h8xxx: begin //8xyk
-				if(stage >= 32'h2 && stage <= 32'h4) begin
+				if(stage >= 32'h2 && stage <= 32'h7) begin
 					reg_addr1 = instruction[11:8];
 					reg_addr2 = instruction[ 7:4];
-				end else if(stage == 32'h5) begin
+				end else if(stage >= 32'h2 && stage <= 32'h8) begin
 					case (instruction[3:0])
 						4'h0: begin //8xy0 - LD Vx, Vy
 							//Set Vx = Vy.
@@ -489,9 +489,9 @@ module Chip8_CPU(
 				//is then ANDed with the value kk. The results are stored in Vx. 
 				//See instruction 8xy2 for more information on AND.
 
-				if(stage == 32'h2 || stage == 32'h3) begin
+				if(stage >= 32'h3 & stage <= NEXT_PC_WRITE_STAGE) begin
 					alu_cmd = ALU_f_AND;
-					alu_in1 = rand_num;
+					alu_in1 = rand_num[7:0];
 					alu_in2 = instruction[7:0];
 
 					reg_addr1 = instruction[11:8];
@@ -624,7 +624,7 @@ module Chip8_CPU(
 
 				if(stage >= 32'h2 & stage <= 32'h6) begin
 					reg_addr1 = instruction[11:8];
-				end else if(stage == 32'h7) begin
+				end else if(stage <= NEXT_PC_WRITE_STAGE) begin
 					delay_timer_writedata = reg_readdata1;
 					delay_timer_WE = 1'b1;
 				end else begin

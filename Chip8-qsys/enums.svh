@@ -86,5 +86,6 @@ typedef enum {
 
  parameter NEXT_PC_WRITE_STAGE = 32'd12;
  parameter CPU_CYCLE_LENGTH = 32'd50000;
+ parameter FRAMEBUFFER_REFRESH_HOLD = 32'd500000;
  
 `endif

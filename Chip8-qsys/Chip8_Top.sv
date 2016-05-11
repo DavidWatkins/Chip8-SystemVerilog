@@ -455,7 +455,7 @@
 
                         if(cpu_stk_op == STACK_PUSH) begin
                             stack_op <= STACK_PUSH;
-                            stack_writedata <= pc;
+                            stack_writedata <= cpu_stk_writedata;
                         end 
 
                         //next_pc final modification on NEXT_PC_WRITE_STAGE
@@ -588,7 +588,7 @@
         .mem_readdata1(memreaddata1), 
         .mem_readdata2(memreaddata2),
         .reg_I_readdata(I),
-        .delay_timer_readdata(delay_timer_data),
+        .delay_timer_readdata(delay_timer_output_data),
         .key_pressed(ispressed),
         .key_press(key),
         .PC_readdata(pc),

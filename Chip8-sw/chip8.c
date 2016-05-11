@@ -410,7 +410,8 @@ void printStatus(FILE *out, int index) {
 	fprintf(out, "v%d: %d\n", i, readRegister(i));
 	}
 
-	fprintf(out, "Sound timer: %d\n\n", readSoundTimer());
+	fprintf(out, "Sound timer: %d\n", readSoundTimer());
+	fprintf(out, "Delay timer: %d\n\n", readDelayTimer());
 }
 
 void *status_thread_f(void *ignored)

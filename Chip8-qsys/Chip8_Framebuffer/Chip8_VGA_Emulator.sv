@@ -123,10 +123,10 @@
 //   			((vcount[8:0]) >= (chip_vend * (5'd8) + 7'd112))  & ((vcount[8:0]) < (chip_vend * (5'd8) + 10'd368));
 		
 		
-		assign inChip = (	((hcount[10:1]) >= (left_bound)) &
-								((hcount[10:1]) <  (right_bound))	&
-								((vcount[8:0])  >= (top_bound)) &
-								((vcount[8:0])) <  (bottom_bound)	);
+		assign inChip = (((hcount[10:1]) > (left_bound)) 	&
+						 ((hcount[10:1]) <  (right_bound))	&
+						 ((vcount[8:0])  > (top_bound)) 	&
+						 ((vcount[8:0])) <  (bottom_bound));
 
 
 		/**
