@@ -474,7 +474,7 @@ module Chip8_CPU(
 				//Jump to location nnn + V0.
 				//The program counter is set to nnn plus the value of V0.
 				if(stage >= 32'h3 & stage <= NEXT_PC_WRITE_STAGE) begin
-					pc_writedata = instruction[11:0];
+					PC_writedata = instruction[11:0];
 					pc_src = PC_SRC_ALU;
 				end
 			end
