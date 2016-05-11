@@ -561,9 +561,7 @@ module Chip8_CPU(
 				//Checks the keyboard, and if the key corresponding to the value 
 				//of Vx is currently in the down position, PC is increased by 2.
 
-				if(stage >= 32'h2 & stage < NEXT_PC_WRITE_STAGE) begin
-					reg_addr1 = instruction[11:8];
-				end else if(stage == NEXT_PC_WRITE_STAGE && key_pressed && key_press == reg_readdata1) begin
+				if(stage >= 32'h2 & stage <= NEXT_PC_WRITE_STAGE && key_pressed && key_press == reg_readdata1) begin
 					reg_addr1 = instruction[11:8];
 					pc_src = PC_SRC_SKIP;
 					//CPU DONE
@@ -579,9 +577,8 @@ module Chip8_CPU(
 				//Checks the keyboard, and if the key corresponding to the value 
 				//of Vx is currently in the up position, PC is increased by 2.
 
-				if(stage >= 32'h2 & stage < NEXT_PC_WRITE_STAGE) begin
+				if(stage >= 32'h2 & stage <= NEXT_PC_WRITE_STAGE & key_press != reg_readdata1) begin
 					reg_addr1 = instruction[11:8];
-				end else if(stage == NEXT_PC_WRITE_STAGE & key_press != reg_readdata1) begin
 					pc_src = PC_SRC_SKIP;
 				end else begin
 					//CPU DONE
@@ -594,7 +591,7 @@ module Chip8_CPU(
 				//Set Vx = delay timer value.
 				//The value of DT is placed into Vx.
 
-				if(stage >= 32'h2 & stage <= 32'h5) begin
+				if(stage >= 32'h2 & stage <= 32'h6) begin
 					reg_addr1 = instruction[11:8];
 					reg_writedata1 = delay_timer_readdata;
 					reg_WE1 = 1'b1;
@@ -608,7 +605,7 @@ module Chip8_CPU(
 				//All execution stops until a key is pressed, then the value of 
 				//that key is stored in Vx.
 
-				if((stage >= 32'h2) && (NEXT_PC_WRITE_STAGE >= stage)) begin
+				if((stage >= 32'h2) && (NEXT_PC_WRITE_STAGE >= stage) & !halt_for_keypress) begin
 					halt_for_keypress = 1'b1;
 				end else if(key_pressed) begin
 					halt_for_keypress = 1'b0;
@@ -625,9 +622,9 @@ module Chip8_CPU(
 				//Set delay timer = Vx.
 				//DT is set equal to the value of Vx.
 
-				if(stage >= 32'h2 & stage <= 32'h5) begin
+				if(stage >= 32'h2 & stage <= 32'h6) begin
 					reg_addr1 = instruction[11:8];
-				end else if(stage == 32'h6) begin
+				end else if(stage == 32'h7) begin
 					delay_timer_writedata = reg_readdata1;
 					delay_timer_WE = 1'b1;
 				end else begin
@@ -640,9 +637,9 @@ module Chip8_CPU(
 				//Set sound timer = Vx.
 				//ST is set equal to the value of Vx.
 
-				if(stage >= 32'h2 & stage <= 32'h5) begin
+				if(stage >= 32'h2 & stage <= 32'h6) begin
 					reg_addr1 = instruction[11:8];
-				end else if(stage == 32'h56) begin
+				end else if(stage == 32'h7) begin
 					sound_timer_writedata = reg_readdata1;
 					sound_timer_WE = 1'b1;
 				end else begin
