@@ -268,11 +268,11 @@
                  end
              end
 
-    			//Read/write to stack pointer
-    			18'h13 : begin
-    				$display("READ/WRITE TO STACK POINTER NOT IMPLEMENTED");
-    				data_out <= 32'h13;
-    			end
+    			//Reset stack 
+				18'h13 : begin 
+					if(write) stack_reset <= 1'b1; 
+					data_out <= 32'h13; 
+				end
 
     			//Read/write to program counter
     			18'h14 : begin 
@@ -356,12 +356,13 @@
            endcase
 
        end else if(chipselect_happened) begin 
-        memWE1 <= 1'b0;
-        fb_WE <= 1'b0;
-        regWE1 <= 1'b0;
-        sound_timer_write_enable <= 1'b0;
-        delay_timer_write_enable <= 1'b0;
-        chipselect_happened <= 1'b0;
+        memWE1 <= 1'b0; 
+		  fb_WE <= 1'b0; 
+		  regWE1 <= 1'b0; 
+		  sound_timer_write_enable <= 1'b0; 
+		  delay_timer_write_enable <= 1'b0; 
+		  chipselect_happened <= 1'b0; 
+		  stack_reset <= 1'b0;
 
         // fb_addr_x <= fbvx_prev;
         // fb_addr_y <= fbvy_prev;
@@ -400,7 +401,7 @@
                         memaddr2 <= pc + 12'h1;
                         cpu_instruction <= {memreaddata1, memreaddata2};
                         last_stage <= stage;
-                    end else if (cpu_instruction[15:12] == 4'hd && stage >= 32'h2 && stage < 32'd10000) begin
+                    /*end else if (cpu_instruction[15:12] == 4'hd && stage >= 32'h2 && stage < 32'd10000) begin
                         last_stage <= stage;
 
                         //DRAWING
@@ -416,7 +417,7 @@
                             fb_writedata <= memreaddata1[index] ^ fb_readdata;
                         end
                         //bit_overwritten goes high whenever a pixel is set from 1 to 0
-                        //END DRAWING
+                        //END DRAWING*/
                     end else if (stage >= 32'h2) begin
                         last_stage <= stage;
                         if(cpu_delay_timer_WE) begin
@@ -461,6 +462,7 @@
                             reg_addr2 <= cpu_reg_addr2;
                         end
 
+								/*
                         if(cpu_mem_WE1) begin
                             memwritedata1 <= cpu_mem_writedata1;
                             memWE1 <= 1'b1;
@@ -474,6 +476,7 @@
                         end else begin
                             memWE2 <= 1'b0;
                         end
+								*/
 
                         if(cpu_reg_I_WE) begin
                             I <= cpu_reg_I_writedata;
@@ -484,8 +487,8 @@
                             stack_writedata <= pc;
                         end 
 
-                        //next_pc modified on 4th stage only
-                        if(stage == 32'h3) begin
+                        //next_pc final modification on NEXT_PC_WRITE_STAGE
+                        if((stage >= NEXT_PC_WRITE_STAGE - 32'h3) & (stage <= NEXT_PC_WRITE_STAGE)) begin
                             if(cpu_stk_op == STACK_POP) begin
                                 stack_op <= STACK_POP;
                                 next_pc <= stack_outdata[11:0];
@@ -519,6 +522,10 @@
                         if(cpu_mem_request) begin
                             memaddr1 <= cpu_mem_addr1;
                             memaddr2 <= cpu_mem_addr2;
+									 memwritedata1 <= cpu_mem_writedata1;
+									 memwritedata2 <= cpu_mem_writedata2;
+									 memWE1 <= cpu_mem_WE1;
+									 memWE2 <= cpu_mem_WE2;
                         end 
 
                         //Always

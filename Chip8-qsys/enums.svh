@@ -70,7 +70,8 @@ typedef enum {
  	Chip8_RUNNING,
 	Chip8_LOADING_ROM,
 	Chip8_LOADING_FONT,
-	Chip8_PAUSED
+	Chip8_PAUSED,
+	Chip8_RUN_INSTRUCTION
  } Chip8_STATE;
 
 /**
@@ -86,4 +87,6 @@ typedef enum {
  	STACK_HOLD
  } STACK_OP;
 
+ parameter NEXT_PC_WRITE_STAGE = 32'd12;
+ 
 `endif
