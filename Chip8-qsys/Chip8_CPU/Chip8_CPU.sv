@@ -86,6 +86,8 @@ module Chip8_CPU(
 	wire[31:0] stage_shifted_by4_minus1 = (stage >> 32'h4) - 32'h1;
 	logic[31:0] num_rows_written; //used for sprite writing
 
+	logic [31:0] stageminus16;
+
 	Chip8_rand_num_generator rand_num_generator(cpu_clk, rand_num);
 	bcd binary_to_dec(to_bcd, bcd_hundreds, bcd_tens, bcd_ones);
 	Chip8_ALU alu(alu_in1, alu_in2, alu_cmd, alu_out, alu_carry);
@@ -129,6 +131,7 @@ module Chip8_CPU(
 		stk_reset 				= 1'b0;
 		stk_writedata 			= 16'b0;
 		isDrawing 				= 1'b0;
+		stageminus16 			= stage - 32'd16;
 		/*END DEFAULT VALUES*/
 		
 		
@@ -519,16 +522,16 @@ module Chip8_CPU(
 				if(stage > 4'b1111) begin
 					reg_addr1 = instruction[11:8];
 					reg_addr2 = instruction[ 7:4];
-					num_rows_written = {4'b0,stage[31:4]};
+					num_rows_written = {7'b0,stageminus16[31:7]};
 					mem_addr1 = num_rows_written + reg_I_readdata;
 					mem_request = 1'b1;
-					fb_addr_x = reg_readdata1 + 8'h7 - ({5'b0, stage[6:4]});
-					fb_addr_y = reg_I_readdata + ({4'b0, num_rows_written[3:0]});
+					fb_addr_x = reg_readdata1 + ({5'b0, stageminus16[6:4]});
+					fb_addr_y = reg_readdata2 + ({4'b0, num_rows_written[3:0]});
 					
-					fb_writedata = mem_readdata1[stage[6:4]] ^ fb_readdata;
+					fb_writedata = mem_readdata1[3'h7 - stageminus16[6:4]] ^ fb_readdata;
 					
-					fb_WE = (num_rows_written < instruction[3:0]) & (&(stage[3:0]));
-					bit_overwritten = (mem_readdata1[stage[6:4]]) & (fb_readdata) & fb_WE;
+					fb_WE = (num_rows_written < {28'h0, instruction[3:0]}) & (&(stage[3:0]));
+					bit_overwritten = (mem_readdata1[3'h7 - stageminus16[6:4]]) & (fb_readdata) & fb_WE;
 					isDrawing = 1'b1;
 				end
 				/*
@@ -558,9 +561,10 @@ module Chip8_CPU(
 				//Checks the keyboard, and if the key corresponding to the value 
 				//of Vx is currently in the down position, PC is increased by 2.
 
-				if(stage >= 32'h2 & stage <= 32'h5) begin
+				if(stage >= 32'h2 & stage < NEXT_PC_WRITE_STAGE) begin
 					reg_addr1 = instruction[11:8];
-				end else if(stage == 32'h6 && key_pressed && key_press == reg_readdata1) begin
+				end else if(stage == NEXT_PC_WRITE_STAGE && key_pressed && key_press == reg_readdata1) begin
+					reg_addr1 = instruction[11:8];
 					pc_src = PC_SRC_SKIP;
 					//CPU DONE
 				end else begin
@@ -575,9 +579,9 @@ module Chip8_CPU(
 				//Checks the keyboard, and if the key corresponding to the value 
 				//of Vx is currently in the up position, PC is increased by 2.
 
-				if(stage >= 32'h2 & stage <= 32'h5) begin
+				if(stage >= 32'h2 & stage < NEXT_PC_WRITE_STAGE) begin
 					reg_addr1 = instruction[11:8];
-				end else if(stage == 32'h6 & key_press != reg_readdata1) begin
+				end else if(stage == NEXT_PC_WRITE_STAGE & key_press != reg_readdata1) begin
 					pc_src = PC_SRC_SKIP;
 				end else begin
 					//CPU DONE
@@ -604,7 +608,7 @@ module Chip8_CPU(
 				//All execution stops until a key is pressed, then the value of 
 				//that key is stored in Vx.
 
-				if(stage == 32'h2) begin
+				if((stage >= 32'h2) && (NEXT_PC_WRITE_STAGE >= stage)) begin
 					halt_for_keypress = 1'b1;
 				end else if(key_pressed) begin
 					halt_for_keypress = 1'b0;

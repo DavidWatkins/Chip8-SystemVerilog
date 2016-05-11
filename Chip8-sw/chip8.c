@@ -457,6 +457,7 @@ int main(int argc, char** argv)
 		// pthread_create(&status_thread, NULL, status_thread_f, NULL);
 
 		while(chip8isRunning() || chip8isPaused()) {
+			printStatus(stdout, 0);
 			checkforkeypress(argv[1]);
 			printKeyState();	
 		}

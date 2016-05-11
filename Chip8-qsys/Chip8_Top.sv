@@ -138,18 +138,6 @@
     logic [11:0] mem_addr_prev;
     logic        chipselect_happened;
 
-    //DRAWING
-    logic [31:0] stageminus3;
-    assign stageminus3 = stage - 3;
-    logic [2:0] index;
-    assign index = stageminus3[4:2]; 
-    logic [31:0] num_rows_written;
-    assign num_rows_written = stageminus3 >> 5;
-
-    logic [7:0] fbx_truncated, fby_truncated;
-    assign fbx_truncated = reg_readdata1 + ({5'b0, index[2:0]});
-    assign fby_truncated = reg_readdata2 + ({4'b0, num_rows_written[3:0]});
-
     initial begin
         pc <= 12'h200;
 
@@ -401,23 +389,6 @@
                         memaddr2 <= pc + 12'h1;
                         cpu_instruction <= {memreaddata1, memreaddata2};
                         last_stage <= stage;
-                    /*end else if (cpu_instruction[15:12] == 4'hd && stage >= 32'h2 && stage < 32'd10000) begin
-                        last_stage <= stage;
-
-                        //DRAWING
-                        reg_addr1 <= cpu_instruction[11:8];
-                        reg_addr2 <= cpu_instruction[ 7:4];
-
-                        if(stage >= 32'h3) begin
-                            memaddr1 <= I[11:0] + {8'b0, num_rows_written[3:0]};
-                            fb_WE <= (num_rows_written < {28'h0, cpu_instruction[3:0]}) & (stageminus3[1:0] == 2'b10);
-
-                            fb_addr_x <= fbx_truncated[5:0];
-                            fb_addr_y <= fby_truncated[4:0];
-                            fb_writedata <= memreaddata1[index] ^ fb_readdata;
-                        end
-                        //bit_overwritten goes high whenever a pixel is set from 1 to 0
-                        //END DRAWING*/
                     end else if (stage >= 32'h2) begin
                         last_stage <= stage;
                         if(cpu_delay_timer_WE) begin
@@ -508,12 +479,12 @@
                         //     fbreset <= 1'b0;
                         // end
 
-                        // if(cpu_fb_WE) begin
-                        //     fb_writedata <= cpu_fb_writedata;
-                        //     fb_WE <= cpu_fb_WE;
-                        // end else begin
-                        //     fb_WE <= 1'b0;   
-                        // end   
+                        if(cpu_fb_WE) begin
+                            fb_writedata <= cpu_fb_writedata;
+                            fb_WE <= cpu_fb_WE;
+                        end else begin
+                            fb_WE <= 1'b0;   
+                        end   
 
                         if(cpu_halt_for_keypress & !ispressed) begin
                             halt_for_keypress <= 1'b1;
@@ -522,10 +493,10 @@
                         if(cpu_mem_request) begin
                             memaddr1 <= cpu_mem_addr1;
                             memaddr2 <= cpu_mem_addr2;
-									 memwritedata1 <= cpu_mem_writedata1;
-									 memwritedata2 <= cpu_mem_writedata2;
-									 memWE1 <= cpu_mem_WE1;
-									 memWE2 <= cpu_mem_WE2;
+							memwritedata1 <= cpu_mem_writedata1;
+							memwritedata2 <= cpu_mem_writedata2;
+							memWE1 <= cpu_mem_WE1;
+							memWE2 <= cpu_mem_WE2;
                         end 
 
                         //Always
@@ -538,16 +509,19 @@
 
                     //Cap of 50000, since 1000 instructions/sec is reasonable
                     if(!halt_for_keypress) begin
-                        if(stage >= 32'd200000) begin
+                        if(stage >= CPU_CYCLE_LENGTH) begin
                             stage <= 32'h0;
                             pc <= next_pc;
-                        end else if (stage == 32'h1) begin
+                        end 
+                        else if (stage == 32'h1) begin
                             if(stage == last_stage) stage <= 32'h2;
                             else stage <= 32'h1;
                         end else if(stage == 32'h2) begin
                             if(stage == last_stage) stage <= 32'h3;
                             else stage <= 32'h2;
-                        end else begin
+                        end 
+
+                        else begin
                             stage <= stage + 32'h1;
                         end
                     end

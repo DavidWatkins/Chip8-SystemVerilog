@@ -85,5 +85,6 @@ typedef enum {
  } STACK_OP;
 
  parameter NEXT_PC_WRITE_STAGE = 32'd12;
+ parameter CPU_CYCLE_LENGTH = 32'd50000;
  
 `endif
