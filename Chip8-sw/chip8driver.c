@@ -93,8 +93,7 @@ static int isValidInstruction(unsigned int addr, unsigned int instruction, int i
 		//Handle state transition
 		case STATE_ADDR: switch(instruction) {
 			case RUNNING_STATE: return 1;
-			case LOADING_ROM_STATE: return 1;
-			case LOADING_FONT_SET_STATE: return 1;
+			case RUN_INSTRUCTION_STATE: return 1;
 			case PAUSED_STATE: return 1;
 			default: return !isWrite;
 		} 
@@ -118,6 +117,7 @@ static int isValidInstruction(unsigned int addr, unsigned int instruction, int i
 		if(isWrite) return 1;
 		else 		return 2;
 
+		case INSTRUCTION_ADDR: return 1;
 
 		default: break;
 	}

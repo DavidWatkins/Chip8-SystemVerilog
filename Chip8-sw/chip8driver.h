@@ -76,17 +76,12 @@ typedef struct {
 * 
 * Use ioread to read from the stack pointer
 */
-#define STACK_POINTER_ADDR 0x4C
+#define STACK_POINTER_ADDR 0x60
 
 /*
-* To write to the stack at the current sp
-* NNNNNDDD
-* Where DDD is the number to write to the stack
-* Increments the stack pointer as a result of the write
-* 
-* Use ioread to read from the stack at the sp
+* To reset the stack, iowrite
 */
-#define STACK_ADDR 0x60
+#define STACK_ADDR 0x4C
 
 /*
 * To write to the program counter
@@ -119,9 +114,8 @@ typedef struct {
 */
 #define STATE_ADDR 0x58
 #define RUNNING_STATE 0x0
-#define LOADING_ROM_STATE 0x1
-#define LOADING_FONT_SET_STATE 0x2
-#define PAUSED_STATE 0x3
+#define RUN_INSTRUCTION_STATE 0x1
+#define PAUSED_STATE 0x2
 
 /*
 * To write to a location in memory
@@ -156,5 +150,19 @@ typedef struct {
 
 #define MAX_FBX 32 //32/8
 #define MAX_FBY 64
+
+/*
+* In order to write data to the instruction
+* 0000_0000_0000_0000_IIII_IIII_IIII_IIII
+* Where I corresponds to the 16 bits in the instruction
+* The state must currently be in Chip8_RUN_INSTRUCTION
+*
+* In order to read data from the framebuffer
+* 0000_0000_0000_0000_0000_NXXX_XXXY_YYYY
+* Where XX is the x position (6 bits)
+* Where YY is the y position (5 bits)
+* Where NN is ignored
+*/
+#define INSTRUCTION_ADDR 0x68
 
 #endif //__CHIP8_DRIVER_H__
