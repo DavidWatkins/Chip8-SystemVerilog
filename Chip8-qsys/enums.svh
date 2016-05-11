@@ -62,8 +62,7 @@ typedef enum {
  * Chip8_STATE defines the current state of the emulator
  *
  * Chip8_RUNNING 		: The emulator is loading and executing instructions
- * Chip8_LOADING_ROM 	: The emulator is paused loading ROM from linux
- * Chip8_LOADING_FONT 	: The emulator is paused loading font from linux
+ * Chip8_RUN_INSTRUCTION: The emulator will run only one instruction
  * Chip8_PAUSED 		: The emulator is paused and will only respond to linux
  */
  typedef enum {
@@ -71,7 +70,8 @@ typedef enum {
 	Chip8_LOADING_ROM,
 	Chip8_LOADING_FONT,
 	Chip8_PAUSED,
-	Chip8_RUN_INSTRUCTION
+ 	Chip8_RUN_INSTRUCTION,
+	Chip8_PAUSED
  } Chip8_STATE;
 
 /**
