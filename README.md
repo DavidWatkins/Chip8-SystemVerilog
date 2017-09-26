@@ -1,12 +1,12 @@
 # Chip8-SystemVerilog
 Implemented a Chip8 Emulator in SystemVerilog meant to run on an Altera SoCKit Cyclone V board
 
-##Software
+## Software
 - [Quartus 13.1](https://dl.altera.com/13.1/?edition=web)
 - [Cyclone V Device Drivers](https://dl.altera.com/13.1/?edition=web)
 - [Linaro Linux](https://rocketboards.org/foswiki/view/Projects/SoCKitLinaroLinuxDesktop#A_42Run_the_demo_using_the_provided_SD_Card_Image_42)
 
-##Setup
+## Setup
 Follow the following two tutorials to get linux running on the SoCKit board
 - [Linaro Linux Setup](https://rocketboards.org/foswiki/view/Projects/SoCKitLinaroLinuxDesktop#A_42Run_the_demo_using_the_provided_SD_Card_Image_42)
 - [Creating u-boot-scr](https://rocketboards.org/foswiki/view/Documentation/GSRD141ProgrammingFPGAArrowSoCKitEdition)
@@ -19,7 +19,7 @@ insmod chip8.ko
 ```
 Where a chip8 file is a .chip8 rom file found on many websites. 
 
-##Running
+## Running
 The controls for the chip8 are:
 ```txt
 +---------+
